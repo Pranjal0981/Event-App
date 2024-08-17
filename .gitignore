@@ -1,0 +1,85 @@
+# Flutter/Dart/Pub related
+**/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+.metadata
+
+# Android related
+/android/.gradle/
+/android/.idea/
+/android/.dart_tool/
+/android/local.properties
+**/android/app/proguard/proguard-rules.pro
+**/android/gradle.properties
+**/android/key.properties
+
+# iOS related
+ios/Pods/
+/ios/.symlinks/
+/ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/app.framework
+ios/Flutter/engine/
+ios/Flutter/engine.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+
+# Xcode related
+**/ios/Flutter/Flutter.podspec
+**/ios/.symlinks/
+**/ios/Pods/
+/ios/Runner.xcworkspace/
+/ios/Runner.xcproject/xcuserdata/
+/ios/Flutter/Flutter.framework
+**/*.xcodeproj/
+*.xcworkspace/
+*.xcconfig
+*.hmap
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code related
+.vscode/
+.history/
+
+# Packages
+/packages
+/packages.bak
+
+# Miscellaneous
+*.class
+*.lock
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# Firebase related
+**/ios/GoogleService-Info.plist
+**/android/app/google-services.json
+
+# Generated files
+*.apk
+*.aab
+*.app.dSYM
+*.ipa
+
+# Web related
+**/web/.dart_tool/
+**/web/.idea/
+**/web/.packages
+**/web/build/
+**/web/generated_plugin_registrant.dart
+**/web/manifest.json
