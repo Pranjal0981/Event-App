@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:grocery_app/Auth/forget_screen.dart';
-import 'package:grocery_app/Auth/register_screen.dart';
-import 'package:grocery_app/Screen/bottom_nav.dart';
-import 'Auth/login_screen.dart';
-import 'Screen/Splash_Screen.dart';
-import 'Screen/home_screen.dart';
-import './Providers/userProvider.dart'; // Make sure to import your UserProvider
 import 'package:provider/provider.dart';
+import 'package:grocery_app/Providers/userProvider.dart';
+import 'package:grocery_app/Providers/eventProvider.dart'; // Import EventProvider
+import 'package:grocery_app/Auth/login_screen.dart';
+import 'package:grocery_app/Auth/register_screen.dart';
+import 'package:grocery_app/Auth/forget_screen.dart';
+import 'package:grocery_app/Screen/home_screen.dart';
+import 'package:grocery_app/Screen/bottom_nav.dart';
+import 'package:grocery_app/Screen/Splash_Screen.dart';
 
 void main() {
- runApp(
+  runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UserProvider()),
@@ -18,6 +19,7 @@ void main() {
     ),
   );
 }
+
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -34,7 +36,8 @@ class MyApp extends StatelessWidget {
       routes: {
         '/register': (context) => RegisterScreen(),
         '/forget-password': (context) => ForgetPasswordScreen(),
-        '/home':(context)=>BottomNav()
+        '/home': (context) => BottomNav(),
+        '/login': (context) => LoginScreen(),
       },
     );
   }

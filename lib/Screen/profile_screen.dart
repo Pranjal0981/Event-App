@@ -1,57 +1,106 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../Providers/userProvider.dart';
 
 class ProfileScreen extends StatelessWidget {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Profile'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Name', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            TextField(
-              controller: _nameController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Enter your name',
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    // Fetch the current user when the screen is loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      userProvider.fetchCurrentUser();
+    });
+
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        final user = userProvider.currentUser;
+
+        // Show loading indicator if data is being fetched
+        if (userProvider.isLoading) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Profile'),
+            ),
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        // Show message if user is not logged in
+        if (user == null) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Profile'),
+            ),
+            body: Center(
+              child: Text('Please log in to view your profile.'),
+            ),
+          );
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('Profile'),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.edit),
+                onPressed: () {
+                  // Navigate to edit profile screen
+                  Navigator.of(context).pushNamed('/editProfile');
+                },
               ),
+            ],
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // User profile picture
+                CircleAvatar(
+                  radius: 50,
+                  backgroundImage: NetworkImage(user['avatarUrl'] ?? 'https://via.placeholder.com/150'),
+                ),
+                SizedBox(height: 16),
+                // User name
+                Text(
+                  'Name: ${user['name'] ?? 'N/A'}',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                // User email
+                Text(
+                  'Email: ${user['email'] ?? 'N/A'}',
+                  style: TextStyle(fontSize: 18),
+                ),
+                SizedBox(height: 8),
+                // User phone number
+                Text(
+                  'Phone Number: ${user['phoneNumber'] ?? 'N/A'}',
+                  style: TextStyle(fontSize: 18),
+                ),
+                SizedBox(height: 8),
+                // User address
+                Text(
+                  'Address: ${user['address'] ?? 'N/A'}',
+                  style: TextStyle(fontSize: 18),
+                ),
+                SizedBox(height: 24),
+                // Logout button
+                ElevatedButton(
+                  onPressed: () {
+                    // userProvider.logout(); // Implement logout in UserProvider
+                    Navigator.of(context).pushReplacementNamed('/login');
+                  },
+                  child: Text('Logout'),
+                ),
+              ],
             ),
-            SizedBox(height: 16),
-            Text('Email', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            TextField(
-              controller: _emailController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Enter your email',
-              ),
-            ),
-            SizedBox(height: 16),
-            Text('Phone', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            TextField(
-              controller: _phoneController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(),
-                hintText: 'Enter your phone number',
-              ),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Handle profile update logic here
-              },
-              child: Text('Update Profile'),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

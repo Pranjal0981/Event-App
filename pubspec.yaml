@@ -24,6 +24,7 @@ dev_dependencies:
   convex_bottom_bar: ^3.0.0
   font_awesome_flutter: ^10.1.0
   flutter_lints: ^4.0.0
+  image_picker: ^1.0.0+1
 
 flutter:
   uses-material-design: true

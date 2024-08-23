@@ -89,10 +89,19 @@ class RegisterScreen extends StatelessWidget {
                                     phone.isNotEmpty &&
                                     password.isNotEmpty) {
                                   userProvider.setLoading(true);
-                                  final message = await userProvider.registerUser(
-                                      name, email, phone, password);
-                                  userProvider.setLoading(false);
-                                  _showPopup(context, message);
+                                  try {
+                                    await userProvider.signup(name, email, phone, password);
+                                    _showPopup(context, "Registration successful!");
+
+                                    // Navigate to the login screen after showing the success message
+                                    Future.delayed(Duration(seconds: 2), () {
+                                      Navigator.pushReplacementNamed(context, '/login');
+                                    });
+                                  } catch (error) {
+                                    _showPopup(context, "Registration failed: $error");
+                                  } finally {
+                                    userProvider.setLoading(false);
+                                  }
                                 } else {
                                   _showPopup(context, "Please fill all the fields.");
                                 }
@@ -101,7 +110,6 @@ class RegisterScreen extends StatelessWidget {
                                 'Register',
                                 style: TextStyle(fontSize: 18),
                               ),
-                              
                             ),
                           ],
                         ),
