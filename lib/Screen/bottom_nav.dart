@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // For additional icons
-import 'package:grocery_app/Screen/home_screen.dart';
+import 'package:grocery_app/Screen/home_Screen.dart';
 import 'package:grocery_app/Screen/upload_event.dart';
 import 'package:grocery_app/Screen/favorites_screen.dart';
 import 'package:grocery_app/Screen/profile_screen.dart';
+import 'package:grocery_app/Screen/menu_screen.dart'; // Import the MenuScreen
 
 class BottomNav extends StatefulWidget {
   @override
@@ -21,9 +21,35 @@ class _BottomNavState extends State<BottomNav> {
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (index < _pages.length) {
+      setState(() {
+        _selectedIndex = index;
+      });
+    } else {
+      _navigateToMenuScreen(context);
+    }
+  }
+
+  void _navigateToMenuScreen(BuildContext context) {
+    Navigator.of(context).push(_createRoute());
+  }
+
+  Route _createRoute() {
+    return PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => MenuScreen(),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(1.0, 0.0); // Slide in from the right
+        const end = Offset.zero;
+        const curve = Curves.easeInOut;
+
+        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+        return SlideTransition(
+          position: animation.drive(tween),
+          child: child,
+        );
+      },
+    );
   }
 
   @override
@@ -67,6 +93,15 @@ class _BottomNavState extends State<BottomNav> {
                   : Icon(Icons.person_outline, key: ValueKey('profile_outline')),
             ),
             label: 'Profile',
+          ),
+          BottomNavigationBarItem(
+            icon: IconButton(
+              icon: Icon(Icons.menu),
+              onPressed: () {
+                _navigateToMenuScreen(context);
+              },
+            ),
+            label: 'Menu',
           ),
         ],
         currentIndex: _selectedIndex,

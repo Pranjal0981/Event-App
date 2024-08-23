@@ -23,7 +23,14 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
   List<String> _cities = [];
   List<String> _filteredCities = [];
   String? _selectedCity;
+  String? _selectedEventType;
   TextEditingController _searchController = TextEditingController();
+
+  final List<String> _eventTypes = [
+    'Tech', 'History', 'Construction', 'Music', 'Art', 'Education', 'Science',
+    'Food & Drink', 'Sports', 'Health', 'Travel', 'Business', 'Lifestyle', 'Entertainment',
+    'Workshops', 'Conferences', 'Meetups'
+  ];
 
   @override
   void initState() {
@@ -65,6 +72,7 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
     final location = _selectedCity ?? _locationController.text;
     final date = DateTime.tryParse(_dateController.text) ?? DateTime.now();
     final price = double.tryParse(_priceController.text) ?? 0.0;
+    final eventType = _selectedEventType;
 
     if (_imageFile != null) {
       setState(() {
@@ -78,6 +86,7 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
           location: location,
           date: date,
           price: price,
+          eventType: eventType,
           image: _imageFile!,
         );
 
@@ -125,11 +134,55 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
     super.dispose();
   }
 
+  void _showCityPicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  labelText: 'Search City',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            Expanded(
+              child: _filteredCities.isNotEmpty
+                  ? ListView.builder(
+                      itemCount: _filteredCities.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        return ListTile(
+                          title: Text(_filteredCities[index]),
+                          onTap: () {
+                            setState(() {
+                              _selectedCity = _filteredCities[index];
+                              _locationController.text = _selectedCity!;
+                            });
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    )
+                  : Center(
+                      child: Text('No cities found.'),
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Upload Event'),
+        backgroundColor: Colors.black,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -141,60 +194,53 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Event Title', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Event Title', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
                     TextField(
                       controller: _titleController,
                       decoration: InputDecoration(
+                        prefixIcon: Icon(Icons.title),
                         border: OutlineInputBorder(),
                         hintText: 'Enter event title',
                       ),
                     ),
                     SizedBox(height: 16),
-                    Text('Description', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Description', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
                     TextField(
                       controller: _descriptionController,
                       maxLines: 4,
                       decoration: InputDecoration(
+                        prefixIcon: Icon(Icons.description),
                         border: OutlineInputBorder(),
                         hintText: 'Enter event description',
                       ),
                     ),
                     SizedBox(height: 16),
-                    Text('Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: 'Search city...',
+                    Text('Location', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () {
+                        _showCityPicker(context);
+                      },
+                      child: AbsorbPointer(
+                        child: TextField(
+                          controller: _locationController,
+                          decoration: InputDecoration(
+                            prefixIcon: Icon(Icons.location_city),
+                            border: OutlineInputBorder(),
+                            hintText: 'Tap to select location',
+                          ),
+                        ),
                       ),
                     ),
-                    SizedBox(height: 8),
-                    _filteredCities.isNotEmpty
-                        ? DropdownButtonFormField<String>(
-                            value: _selectedCity,
-                            items: _filteredCities
-                                .map((city) => DropdownMenuItem(
-                                      value: city,
-                                      child: Text(city),
-                                    ))
-                                .toList(),
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                _selectedCity = newValue;
-                                _locationController.text = newValue ?? '';
-                              });
-                            },
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(),
-                              hintText: 'Select event location',
-                            ),
-                          )
-                        : Text('No cities found.'),
                     SizedBox(height: 16),
-                    Text('Date', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Date', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
                     TextField(
                       controller: _dateController,
                       decoration: InputDecoration(
+                        prefixIcon: Icon(Icons.calendar_today),
                         border: OutlineInputBorder(),
                         hintText: 'Enter event date (yyyy-mm-dd)',
                       ),
@@ -212,29 +258,59 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
                       readOnly: true,
                     ),
                     SizedBox(height: 16),
-                    Text('Ticket Price', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Ticket Price', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
                     TextField(
                       controller: _priceController,
                       decoration: InputDecoration(
+                        prefixIcon: Icon(Icons.attach_money),
                         border: OutlineInputBorder(),
                         hintText: 'Enter ticket price',
                       ),
                       keyboardType: TextInputType.number,
                     ),
                     SizedBox(height: 16),
-                    Text('Event Image', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Event Type', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     SizedBox(height: 8),
-                    _imageFile != null
-                        ? Image.file(
+                    DropdownButtonFormField<String>(
+                      value: _selectedEventType,
+                      hint: Text('Select event type'),
+                      items: _eventTypes.map((type) {
+                        return DropdownMenuItem(
+                          value: type,
+                          child: Text(type),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedEventType = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        prefixIcon: Icon(Icons.event),
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    Text('Event Image', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
+                    _imageFile == null
+                        ? GestureDetector(
+                            onTap: _pickImage,
+                            child: Container(
+                              height: 150,
+                              width: double.infinity,
+                              color: Colors.grey[200],
+                              child: Center(child: Text('Tap to select image')),
+                            ),
+                          )
+                        : Image.file(
                             _imageFile!,
                             height: 150,
-                          )
-                        : Text('No image selected.'),
-                    ElevatedButton(
-                      onPressed: _pickImage,
-                      child: Text('Choose Image'),
-                    ),
-                    SizedBox(height: 20),
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                    SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: _uploadEvent,
                       child: Text('Upload Event'),
