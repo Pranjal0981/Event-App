@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:grocery_app/Providers/userProvider.dart';
+import 'package:provider/provider.dart';
+import 'package:grocery_app/Screen/home_screen.dart'; // Ensure this import is correct
 
 class EventSearchDelegate extends SearchDelegate {
   final Function(String) onSearch;
@@ -23,20 +26,26 @@ class EventSearchDelegate extends SearchDelegate {
     return IconButton(
       icon: Icon(Icons.arrow_back),
       onPressed: () {
-        Navigator.pop(context);
+        close(context, null); // Close search delegate
       },
     );
   }
 
   @override
   Widget buildResults(BuildContext context) {
-    onSearch(query);
-    return Container(); // Returning an empty container as we are using the main screen for results
+    onSearch(query); // Trigger search
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
+    });
+    return Center(child: CircularProgressIndicator()); // Placeholder while loading
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    // Provide suggestions if needed; otherwise, you can return an empty container
+    // Provide suggestions if needed; otherwise, return an empty container
     return Container();
   }
 }

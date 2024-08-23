@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/Providers/userProvider.dart';
 import 'package:grocery_app/Screen/event_details.dart';
+import 'package:grocery_app/Screen/event_search_delegate.dart';
 import 'package:grocery_app/Screen/filter_sheet.dart';
 import 'package:provider/provider.dart';
 
-class HomeScreen extends StatelessWidget {
+
+
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
@@ -16,13 +25,21 @@ class HomeScreen extends StatelessWidget {
           IconButton(
             icon: Icon(Icons.search),
             onPressed: () {
-              // Implement search functionality here
+              showSearch(
+                context: context,
+                delegate: EventSearchDelegate(
+                  onSearch: (query) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _searchEvents(query);
+                    });
+                  },
+                ),
+              );
             },
           ),
           IconButton(
             icon: Icon(Icons.filter_list),
             onPressed: () {
-              // Show the filter bottom sheet
               showModalBottomSheet(
                 context: context,
                 builder: (context) => FilterSheet(),
@@ -48,8 +65,18 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-}
 
+  void _searchEvents(String query) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    if (query.isNotEmpty) {
+      await userProvider.searchEvents(query);
+      if (mounted) {
+        setState(() {}); // Ensure setState is only called if widget is still mounted
+      }
+    }
+  }
+}
 class EventCard extends StatelessWidget {
   final Map<String, dynamic> event;
 

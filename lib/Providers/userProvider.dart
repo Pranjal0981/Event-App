@@ -364,4 +364,28 @@ Future<void> fetchEventById(String eventId) async {
   }
 }
 
+  Future<void> searchEvents(String query) async {
+    _isLoading = true;
+    notifyListeners(); // Notify listeners that loading has started
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://192.168.243.187:3001/user/events/search?query=$query'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as List<dynamic>;
+        _events = data.map((e) => e as Map<String, dynamic>).toList();
+      } else {
+        // Handle the case where the server doesn't return a 200 response
+        _events = []; // Clear events in case of an error
+      }
+    } catch (error) {
+      // Handle the error, e.g., show a dialog or set an error message
+      _events = []; // Clear events in case of an error
+    }
+
+    _isLoading = false;
+    notifyListeners(); // Notify listeners that loading has finished
+  }
 }
