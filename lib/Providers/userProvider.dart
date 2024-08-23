@@ -9,12 +9,16 @@ class UserProvider extends ChangeNotifier {
   Map<String, dynamic>? _currentUser;
   bool _isLoading = false;
   List<Map<String, dynamic>> _events = [];
+  List<String> _favoriteEventIds = [];
+  List<String> get favoriteEventIds => _favoriteEventIds;
+  Map<String, dynamic>? _currentEvent;
 
   bool get isAuthenticated => _token != null;
   bool get isLoading => _isLoading;
   Map<String, dynamic>? get currentUser => _currentUser;
   String? get token => _token;
   List<Map<String, dynamic>> get events => _events;
+  Map<String, dynamic>? get currentEvent => _currentEvent;
 
   void setLoading(bool loading) {
     _isLoading = loading;
@@ -146,33 +150,140 @@ class UserProvider extends ChangeNotifier {
   }
 
   Future<void> fetchEvents() async {
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
+      final token = _token ?? await _getTokenFromPrefs();
+      if (token == null) {
+        throw Exception('No token found');
+      }
+
+      final response = await http.get(
+        Uri.parse('http://192.168.243.187:3001/user/getEvents'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        _events = List<Map<String, dynamic>>.from(responseData['events']);
+
+  
+      } else {
+        throw Exception('Failed to fetch events');
+      }
+    } catch (error) {
+      print('Failed to fetch events: $error');
+      _events = [];
+    } finally {
+      setLoading(false);
+      notifyListeners();
+    }
+  }
+
+ Future<void> fetchFavoriteEvents() async {
+  try {
     final token = _token ?? await _getTokenFromPrefs();
     if (token == null) {
       throw Exception('No token found');
     }
 
+    final prefs = await SharedPreferences.getInstance();
+    final userString = prefs.getString('currentUser');
+    final user = json.decode(userString ?? '{}');
+    final userId = user['_id'];
+
     final response = await http.get(
-      Uri.parse('http://192.168.243.187:3001/user/getEvents'), // Replace with your API URL
+      Uri.parse('http://192.168.243.187:3001/user/getFavoriteEvents?userId=$userId'),
       headers: {'Authorization': 'Bearer $token'},
     );
 
     if (response.statusCode == 200) {
       final responseData = json.decode(response.body);
-      _events = List<Map<String, dynamic>>.from(responseData['events']);
+
+      // Access the favoriteEvents key and cast it to List<dynamic>
+      final favoriteEvents = responseData['favoriteEvents'] as List<dynamic>;
+
+      // Extract event IDs of favorites
+      _favoriteEventIds = favoriteEvents
+          .map((item) => item['_id'].toString())
+          .toList();
+
+      // Update _events with event details from the response
+      _events = favoriteEvents.map((item) {
+        return {
+          '_id': item['_id'].toString(),
+          'title': item['title'],
+          'description': item['description'],
+          'location': item['location'],
+          'date': item['date'],
+          'image': item['image']['url'], // Assuming you need the URL of the image
+          // Add other fields as needed
+        };
+      }).toList();
+
+      notifyListeners();
     } else {
-      throw Exception('Failed to fetch events');
+      throw Exception('Failed to fetch favorite events');
     }
   } catch (error) {
-    print('Failed to fetch events: $error');
-    _events = [];
-  } finally {
-    setLoading(false);
-    notifyListeners();
+    print('Failed to fetch favorite events: $error');
   }
 }
+
+  Future<void> toggleFavorite(String eventId) async {
+    try {
+      final token = _token ?? await _getTokenFromPrefs();
+      if (token == null) {
+        throw Exception('No token found');
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final userString = prefs.getString('currentUser');
+      final user = json.decode(userString ?? '{}');
+      final userId = user['_id'];
+
+      final response = await http.post(
+        Uri.parse('http://192.168.243.187:3001/user/toggle-favorite'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'userId': userId,
+          'eventId': eventId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        final isFavorite = responseData['isFavorite'];
+
+        // Update the local event list based on the response
+        _events = _events.map((event) {
+          if (event['_id'] == eventId) {
+            return {
+              ...event,
+              'isFavorite': isFavorite,
+            };
+          }
+          return event;
+        }).toList();
+
+        // Update favorite event IDs
+        if (isFavorite) {
+          _favoriteEventIds.add(eventId);
+        } else {
+          _favoriteEventIds.remove(eventId);
+        }
+
+        notifyListeners();
+      } else {
+        throw Exception('Failed to toggle favorite status');
+      }
+    } catch (error) {
+      print('Failed to toggle favorite: $error');
+    }
+  }
 
   Future<bool> uploadEvent({
     required String title,
@@ -183,40 +294,74 @@ class UserProvider extends ChangeNotifier {
     required double price,
     required File image,
   }) async {
-    final uri = Uri.parse('http://192.168.243.187:3001/user/upload-event'); // Replace with your API URL
+    final uri = Uri.parse('http://192.168.243.187:3001/user/upload-event');
     final token = _token ?? await _getTokenFromPrefs();
-    
-    // Retrieve current user from SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    final userString = prefs.getString('currentUser');
-    final user = json.decode(userString ?? '{}');
-    final userId = user['_id']; // Get the user ID from the decoded JSON
-    
+    if (token == null) {
+      throw Exception('No token found');
+    }
+
     final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
       ..fields['title'] = title
       ..fields['description'] = description
       ..fields['location'] = location
+      ..fields['eventType'] = eventType ?? ''
       ..fields['date'] = date.toIso8601String()
       ..fields['price'] = price.toString()
-      ..fields['eventType'] = eventType ?? '' // Handle null case
-      ..fields['userId'] = userId // Include the user ID
       ..files.add(await http.MultipartFile.fromPath('image', image.path));
-
-    // Add the Authorization header with the Bearer token
-    if (token != null) {
-      request.headers['Authorization'] = 'Bearer $token';
-    }
 
     try {
       final response = await request.send();
-      if (response.statusCode == 201) {
-        return true; // Success
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
+        final result = json.decode(responseData);
+
+        if (result['success']) {
+          return true;
+        } else {
+          throw Exception('Failed to upload event');
+        }
       } else {
-        return false; // Failure
+        throw Exception('Failed to upload event');
       }
-    } catch (e) {
-      print('Error during event upload: $e');
-      return false; // Failure
+    } catch (error) {
+      print('Error uploading event: $error');
+      return false;
     }
   }
+
+
+
+Future<void> fetchEventById(String eventId) async {
+  if (_currentEvent != null && _currentEvent!['_id'] == eventId) {
+    // Event is already fetched
+    return;
+  }
+
+  _isLoading = true;
+  notifyListeners();
+
+  try {
+    final response = await http.get(Uri.parse('http://192.168.243.187:3001/user/getEvent/$eventId'));
+    if (response.statusCode == 200) {
+      final responseBody = json.decode(response.body);
+      print('Response body: $responseBody'); // Debug response
+      if (responseBody['success'] == true) {
+        _currentEvent = responseBody['data']; // Access 'data' field
+        print('Current Event: $_currentEvent'); // Debug _currentEvent
+      } else {
+        throw Exception('Failed to load event');
+      }
+    } else {
+      throw Exception('Failed to load event');
+    }
+  } catch (error) {
+    print('Error: $error'); // Debug error
+    throw error;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
+
 }

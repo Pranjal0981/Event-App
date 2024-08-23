@@ -1,69 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:grocery_app/Providers/userProvider.dart';
+import 'package:grocery_app/Screen/event_details.dart';
+import 'package:grocery_app/Screen/filter_sheet.dart';
 import 'package:provider/provider.dart';
-import 'package:grocery_app/Providers/userProvider.dart'; // Adjust the import path as needed
 
 class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
 
-    // Fetch events if not already loaded
-    WidgetsBinding.instance?.addPostFrameCallback((_) async {
-      if (userProvider.events.isEmpty && !userProvider.isLoading) {
-        await userProvider.fetchEvents();
-      }
-    });
-
     return Scaffold(
       appBar: AppBar(
         title: Text('Events'),
-        backgroundColor: Colors.red,
         actions: [
           IconButton(
             icon: Icon(Icons.search),
             onPressed: () {
-              // Handle search
+              // Implement search functionality here
+            },
+          ),
+          IconButton(
+            icon: Icon(Icons.filter_list),
+            onPressed: () {
+              // Show the filter bottom sheet
+              showModalBottomSheet(
+                context: context,
+                builder: (context) => FilterSheet(),
+              );
             },
           ),
         ],
       ),
-      body: _buildBody(userProvider),
+      body: userProvider.isLoading
+          ? Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              itemCount: userProvider.events.length,
+              itemBuilder: (context, index) {
+                final event = userProvider.events[index];
+                return EventCard(event: event);
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await userProvider.fetchEvents();
         },
-        backgroundColor: Colors.red,
         child: Icon(Icons.refresh),
-      ),
-    );
-  }
-
-  Widget _buildBody(UserProvider userProvider) {
-    if (userProvider.isLoading) {
-      return Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    if (userProvider.events.isEmpty) {
-      return Center(
-        child: Text(
-          'No events available',
-          style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        await userProvider.fetchEvents();
-      },
-      child: ListView.builder(
-        itemCount: userProvider.events.length,
-        itemBuilder: (context, index) {
-          final event = userProvider.events[index];
-          return EventCard(event: event);
-        },
       ),
     );
   }
@@ -77,44 +58,56 @@ class EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
-    final bool isFavorite = event['isFavorite'] ?? false;
 
-    return Card(
-      elevation: 6,
-      margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildImage(),
-            SizedBox(height: 12),
-            _buildTitle(),
-            SizedBox(height: 8),
-            _buildDescription(),
-            SizedBox(height: 8),
-            _buildLocationAndPrice(),
-            SizedBox(height: 8),
-            _buildDate(),
-            SizedBox(height: 8),
-            _buildType(),
-            SizedBox(height: 8),
-            _buildFavoriteButton(userProvider, isFavorite),
-          ],
+    return GestureDetector(
+      onTap: () {
+        // Navigate to the EventDetailsScreen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EventDetailsScreen(eventId: event['_id']),
+          ),
+        );
+      },
+      child: Card(
+        elevation: 6,
+        margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildImage(),
+              SizedBox(height: 12),
+              _buildTitle(),
+              SizedBox(height: 8),
+              _buildDescription(),
+              SizedBox(height: 8),
+              _buildLocationAndPrice(),
+              SizedBox(height: 8),
+              _buildDate(),
+              SizedBox(height: 8),
+              _buildType(),
+              SizedBox(height: 8),
+              _buildFavoriteButton(context, userProvider),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildImage() {
-    return event['image'] != null
+    final image = event['image'] is Map<String, dynamic> ? event['image'] as Map<String, dynamic> : null;
+
+    return image != null
         ? ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.network(
-              event['image']['url'],
+              image['url'] ?? '',
               height: 200,
               width: double.infinity,
               fit: BoxFit.cover,
@@ -130,18 +123,18 @@ class EventCard extends StatelessWidget {
 
   Widget _buildTitle() {
     return Text(
-      event['title'],
+      event['title'] ?? 'No Title',
       style: TextStyle(
         fontWeight: FontWeight.bold,
         fontSize: 20,
-        color: Colors.red,
+        color: Colors.black87,
       ),
     );
   }
 
   Widget _buildDescription() {
     return Text(
-      event['description'],
+      event['description'] ?? 'No Description',
       maxLines: 3,
       overflow: TextOverflow.ellipsis,
       style: TextStyle(color: Colors.grey[700]),
@@ -153,11 +146,11 @@ class EventCard extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Location: ${event['location']}',
+          'Location: ${event['location'] ?? 'No Location'}',
           style: TextStyle(color: Colors.grey[600]),
         ),
         Text(
-          '\$${event['price']}',
+          '\$${event['price'] ?? 0}',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.red,
@@ -168,20 +161,25 @@ class EventCard extends StatelessWidget {
   }
 
   Widget _buildDate() {
+    final date = event['date'] as String?;
+    final formattedDate = date != null ? _formatDate(date) : 'No Date';
+
     return Text(
-      'Date: ${_formatDate(event['date'])}',
+      'Date: $formattedDate',
       style: TextStyle(color: Colors.grey[600]),
     );
   }
 
   Widget _buildType() {
     return Text(
-      'Type: ${event['eventType']}',
+      'Type: ${event['eventType'] ?? 'No Type'}',
       style: TextStyle(color: Colors.grey[600]),
     );
   }
 
-  Widget _buildFavoriteButton(UserProvider userProvider, bool isFavorite) {
+  Widget _buildFavoriteButton(BuildContext context, UserProvider userProvider) {
+    final isFavorite = userProvider.favoriteEventIds.contains(event['_id']);
+
     return Align(
       alignment: Alignment.centerRight,
       child: IconButton(
@@ -189,8 +187,17 @@ class EventCard extends StatelessWidget {
           isFavorite ? Icons.favorite : Icons.favorite_border,
           color: isFavorite ? Colors.red : Colors.grey,
         ),
-        onPressed: () {
-          // userProvider.toggleFavorite(event['_id']);
+        onPressed: () async {
+          try {
+            await userProvider.toggleFavorite(event['_id']);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(isFavorite ? 'Removed from favorites' : 'Added to favorites')),
+            );
+          } catch (error) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to update favorite status')),
+            );
+          }
         },
       ),
     );
