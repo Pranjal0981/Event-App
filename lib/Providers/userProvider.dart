@@ -149,36 +149,36 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchEvents() async {
-    try {
-      setLoading(true);
+    Future<void> fetchEvents() async {
+      try {
+        setLoading(true);
 
-      final token = _token ?? await _getTokenFromPrefs();
-      if (token == null) {
-        throw Exception('No token found');
+        final token = _token ?? await _getTokenFromPrefs();
+        if (token == null) {
+          throw Exception('No token found');
+        }
+
+        final response = await http.get(
+          Uri.parse('http://192.168.243.187:3001/user/getEvents'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          _events = List<Map<String, dynamic>>.from(responseData['events']);
+
+    
+        } else {
+          throw Exception('Failed to fetch events');
+        }
+      } catch (error) {
+        print('Failed to fetch events: $error');
+        _events = [];
+      } finally {
+        setLoading(false);
+        notifyListeners();
       }
-
-      final response = await http.get(
-        Uri.parse('http://192.168.243.187:3001/user/getEvents'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      if (response.statusCode == 200) {
-        final responseData = json.decode(response.body);
-        _events = List<Map<String, dynamic>>.from(responseData['events']);
-
-  
-      } else {
-        throw Exception('Failed to fetch events');
-      }
-    } catch (error) {
-      print('Failed to fetch events: $error');
-      _events = [];
-    } finally {
-      setLoading(false);
-      notifyListeners();
     }
-  }
 
  Future<void> fetchFavoriteEvents() async {
   try {
