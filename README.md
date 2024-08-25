@@ -167,9 +167,6 @@ Before you begin, ensure you have the following installed:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
-
-**Note**: Replace placeholders like `yourusername` and `your-feature` with relevant details about your project and the specific features you're working on.
 
 ```
 
