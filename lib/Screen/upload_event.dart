@@ -113,11 +113,11 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(title),
+          title: Text(title, style: TextStyle(color: Colors.red[800])),
           content: Text(message),
           actions: <Widget>[
             TextButton(
-              child: Text('OK'),
+              child: Text('OK', style: TextStyle(color: Colors.red[800])),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -147,6 +147,8 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
                 decoration: InputDecoration(
                   labelText: 'Search City',
                   border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: Colors.black.withOpacity(0.1),
                 ),
               ),
             ),
@@ -177,12 +179,25 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
     );
   }
 
+  Future<void> _pickDate() async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (pickedDate != null) {
+      _dateController.text = pickedDate.toString().split(' ')[0];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text('Upload Event'),
         backgroundColor: Colors.black,
+        foregroundColor: Colors.red,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -194,131 +209,102 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Event Title', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _titleController,
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(Icons.title),
-                        border: OutlineInputBorder(),
-                        hintText: 'Enter event title',
-                      ),
-                    ),
+                    _buildTitleText('Event Title'),
+                    _buildTextField(_titleController, 'Enter event title', Icons.title),
                     SizedBox(height: 16),
-                    Text('Description', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _descriptionController,
-                      maxLines: 4,
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(Icons.description),
-                        border: OutlineInputBorder(),
-                        hintText: 'Enter event description',
-                      ),
-                    ),
+                    _buildTitleText('Description'),
+                    _buildTextField(_descriptionController, 'Enter event description', Icons.description, maxLines: 4),
                     SizedBox(height: 16),
-                    Text('Location', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
+                    _buildTitleText('Location'),
                     GestureDetector(
-                      onTap: () {
-                        _showCityPicker(context);
-                      },
+                      onTap: () => _showCityPicker(context),
                       child: AbsorbPointer(
-                        child: TextField(
-                          controller: _locationController,
-                          decoration: InputDecoration(
-                            prefixIcon: Icon(Icons.location_city),
-                            border: OutlineInputBorder(),
-                            hintText: 'Tap to select location',
-                          ),
-                        ),
+                        child: _buildTextField(_locationController, 'Tap to select location', Icons.location_city),
                       ),
                     ),
                     SizedBox(height: 16),
-                    Text('Date', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _dateController,
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(Icons.calendar_today),
-                        border: OutlineInputBorder(),
-                        hintText: 'Enter event date (yyyy-mm-dd)',
+                    _buildTitleText('Date'),
+                    GestureDetector(
+                      onTap: () => _pickDate(),
+                      child: AbsorbPointer(
+                        child: _buildTextField(_dateController, 'Select event date', Icons.calendar_today),
                       ),
-                      onTap: () async {
-                        DateTime? pickedDate = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2101),
-                        );
-                        if (pickedDate != null) {
-                          _dateController.text = pickedDate.toString().split(' ')[0];
-                        }
-                      },
-                      readOnly: true,
                     ),
                     SizedBox(height: 16),
-                    Text('Ticket Price', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
-                    TextField(
-                      controller: _priceController,
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(Icons.attach_money),
-                        border: OutlineInputBorder(),
-                        hintText: 'Enter ticket price',
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
+                    _buildTitleText('Ticket Price'),
+                    _buildTextField(_priceController, 'Enter ticket price', Icons.monetization_on),
                     SizedBox(height: 16),
-                    Text('Event Type', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
+                    _buildTitleText('Event Type'),
                     DropdownButtonFormField<String>(
                       value: _selectedEventType,
-                      hint: Text('Select event type'),
                       items: _eventTypes.map((type) {
-                        return DropdownMenuItem(
+                        return DropdownMenuItem<String>(
                           value: type,
                           child: Text(type),
                         );
                       }).toList(),
-                      onChanged: (value) {
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: Colors.black.withOpacity(0.1),
+                      ),
+                      onChanged: (String? newValue) {
                         setState(() {
-                          _selectedEventType = value;
+                          _selectedEventType = newValue;
                         });
                       },
-                      decoration: InputDecoration(
-                        prefixIcon: Icon(Icons.event),
-                        border: OutlineInputBorder(),
+                      hint: Text('Select event type'),
+                    ),
+                    SizedBox(height: 16),
+                    _buildTitleText('Event Image'),
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: Container(
+                        height: 150,
+                        width: double.infinity,
+                        color: Colors.black.withOpacity(0.1),
+                        child: _imageFile != null
+                            ? Image.file(_imageFile!, fit: BoxFit.cover)
+                            : Center(child: Text('Tap to select image')),
                       ),
                     ),
                     SizedBox(height: 16),
-                    Text('Event Image', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
-                    _imageFile == null
-                        ? GestureDetector(
-                            onTap: _pickImage,
-                            child: Container(
-                              height: 150,
-                              width: double.infinity,
-                              color: Colors.grey[200],
-                              child: Center(child: Text('Tap to select image')),
-                            ),
-                          )
-                        : Image.file(
-                            _imageFile!,
-                            height: 150,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
-                    SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _uploadEvent,
-                      child: Text('Upload Event'),
+                    Center(
+                      child: ElevatedButton(
+                        onPressed: _uploadEvent,
+                        child: Text('Upload Event'),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          overlayColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ),
       ),
+    );
+  }
+
+  Widget _buildTitleText(String title) {
+    return Text(
+      title,
+      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String hintText, IconData icon, {int? maxLines}) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        hintText: hintText,
+        prefixIcon: Icon(icon, color: Colors.red),
+        border: OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.black.withOpacity(0.1),
+      ),
+      maxLines: maxLines ?? 1,
     );
   }
 }

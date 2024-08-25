@@ -12,6 +12,8 @@ class UserProvider extends ChangeNotifier {
   List<String> _favoriteEventIds = [];
   List<String> get favoriteEventIds => _favoriteEventIds;
   Map<String, dynamic>? _currentEvent;
+ List<dynamic> _myEvents = [];
+  List<dynamic> get myEvents => _myEvents;
 
   bool get isAuthenticated => _token != null;
   bool get isLoading => _isLoading;
@@ -330,8 +332,6 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-
-
 Future<void> fetchEventById(String eventId) async {
   if (_currentEvent != null && _currentEvent!['_id'] == eventId) {
     // Event is already fetched
@@ -387,5 +387,34 @@ Future<void> fetchEventById(String eventId) async {
 
     _isLoading = false;
     notifyListeners(); // Notify listeners that loading has finished
+  }
+
+
+  Future<void> fetchMyEvents() async {
+    _isLoading = true;
+    notifyListeners(); // Notify listeners that loading has started
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userString = prefs.getString('currentUser');
+      final user = json.decode(userString ?? '{}');
+      final userId = user['_id'];
+
+      final res = await http.get(
+        Uri.parse('http://192.168.243.187:3001/user/your-events/$userId'),
+      );
+
+      if (res.statusCode == 200) {
+        final data = json.decode(res.body);
+        _events = data['events'];
+      } else {
+        throw Exception('Failed to load events');
+      }
+    } catch (e) {
+      print(e);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }

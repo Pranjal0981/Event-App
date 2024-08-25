@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:grocery_app/Screen/my_events.dart';
 import 'package:provider/provider.dart';
 import 'package:grocery_app/Providers/themeProvider.dart';
 import 'package:grocery_app/Providers/userProvider.dart';
@@ -55,7 +56,7 @@ class MyApp extends StatelessWidget {
       home: SplashScreen(), // Set SplashScreen as the initial screen
       routes: {
         '/register': (context) => RegisterScreen(),
-        '/forget-password': (context) => ForgetPasswordScreen(),
+        '/forget-password': (context) => RequestOtpScreen(),
         '/home': (context) => BottomNav(),
         '/login': (context) => LoginScreen(),
         '/notifications': (context) => NotificationsScreen(),
@@ -65,6 +66,7 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => ProfileScreen(),
         '/helpCenter': (context) => HelpCenterScreen(),
         '/themeSettings': (context) => ThemeSettingsScreen(),
+        '/yourEvents':(context)=>MyEventsScreen()
       },
     );
   }

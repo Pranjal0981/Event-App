@@ -5,14 +5,24 @@ import 'package:grocery_app/Screen/event_search_delegate.dart';
 import 'package:grocery_app/Screen/filter_sheet.dart';
 import 'package:provider/provider.dart';
 
-
-
 class HomeScreen extends StatefulWidget {
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  void _loadData() async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+      await userProvider.fetchEvents();
+   
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 }
+
 class EventCard extends StatelessWidget {
   final Map<String, dynamic> event;
 
