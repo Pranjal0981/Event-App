@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:grocery_app/Providers/userProvider.dart';
-import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
+import 'dart:io';
+import 'package:grocery_app/Providers/userProvider.dart';
 
 class UploadEventsScreen extends StatefulWidget {
   @override
@@ -58,11 +58,37 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
   }
 
   Future<void> _pickImage() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
+    final source = await showDialog<ImageSource>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Select Image Source'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.photo_library),
+                title: Text('Gallery'),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: Icon(Icons.camera_alt),
+                title: Text('Camera'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source != null) {
+      final pickedFile = await _picker.pickImage(source: source);
+      if (pickedFile != null) {
+        setState(() {
+          _imageFile = File(pickedFile.path);
+        });
+      }
     }
   }
 
@@ -202,9 +228,7 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: _isLoading
-            ? Center(
-                child: CircularProgressIndicator(),
-              )
+            ? CustomLoader()  // Display the custom loader when loading
             : SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,35 +272,38 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
                         filled: true,
                         fillColor: Colors.black.withOpacity(0.1),
                       ),
-                      onChanged: (String? newValue) {
+                      onChanged: (value) {
                         setState(() {
-                          _selectedEventType = newValue;
+                          _selectedEventType = value;
                         });
                       },
-                      hint: Text('Select event type'),
                     ),
                     SizedBox(height: 16),
                     _buildTitleText('Event Image'),
                     GestureDetector(
                       onTap: _pickImage,
-                      child: Container(
-                        height: 150,
-                        width: double.infinity,
-                        color: Colors.black.withOpacity(0.1),
-                        child: _imageFile != null
-                            ? Image.file(_imageFile!, fit: BoxFit.cover)
-                            : Center(child: Text('Tap to select image')),
-                      ),
+                      child: _imageFile == null
+                          ? Container(
+                              height: 150,
+                              width: double.infinity,
+                              color: Colors.grey[300],
+                              child: Center(child: Text('Tap to select image')),
+                            )
+                          : Image.file(
+                              _imageFile!,
+                              height: 150,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
                     ),
-                    SizedBox(height: 16),
+                    SizedBox(height: 32),
                     Center(
                       child: ElevatedButton(
                         onPressed: _uploadEvent,
                         child: Text('Upload Event'),
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.black,
                           foregroundColor: Colors.red,
-                          overlayColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 16, horizontal: 32),
                         ),
                       ),
                     ),
@@ -287,14 +314,19 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
     );
   }
 
-  Widget _buildTitleText(String title) {
+  Widget _buildTitleText(String text) {
     return Text(
-      title,
-      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
+      text,
+      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hintText, IconData icon, {int? maxLines}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String hintText,
+    IconData icon, {
+    int maxLines = 1,
+  }) {
     return TextField(
       controller: controller,
       decoration: InputDecoration(
@@ -304,7 +336,70 @@ class _UploadEventsScreenState extends State<UploadEventsScreen> {
         filled: true,
         fillColor: Colors.black.withOpacity(0.1),
       ),
-      maxLines: maxLines ?? 1,
+      maxLines: maxLines,
+    );
+  }
+}
+
+
+
+class CustomLoader extends StatefulWidget {
+  @override
+  _CustomLoaderState createState() => _CustomLoaderState();
+}
+
+class _CustomLoaderState extends State<CustomLoader> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,
+    )..repeat(reverse: true);
+
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SizedBox(
+        width: 60,
+        height: 60,
+        child: Stack(
+          children: [
+            _buildDot(0),
+            _buildDot(1),
+            _buildDot(2),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDot(int index) {
+    return Positioned(
+      left: 20.0 * index,
+      child: FadeTransition(
+        opacity: _animation,
+        child: Container(
+          width: 15,
+          height: 15,
+          decoration: BoxDecoration(
+            color: Colors.red,
+            shape: BoxShape.circle,
+          ),
+        ),
+      ),
     );
   }
 }

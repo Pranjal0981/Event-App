@@ -30,9 +30,12 @@ class UserProvider extends ChangeNotifier {
   Future<void> signup(String name, String email, String phoneNumber, String password) async {
     try {
       setLoading(true);
-
+      print(name);
+      print(email);
+      print(phoneNumber);
+      print(password);
       final response = await http.post(
-        Uri.parse('http://192.168.43.255:3001/user/registerUser'),
+        Uri.parse('http://192.168.243.187:3001/user/registerUser'),
         body: json.encode({
           'name': name,
           'email': email,
@@ -313,19 +316,19 @@ class UserProvider extends ChangeNotifier {
       ..files.add(await http.MultipartFile.fromPath('image', image.path));
 
     try {
-      final response = await request.send();
-      if (response.statusCode == 200) {
-        final responseData = await response.stream.bytesToString();
-        final result = json.decode(responseData);
+   final response = await request.send();
+if (response.statusCode == 201) {  // Update to match your success status code
+  final responseData = await response.stream.bytesToString();
+  final result = json.decode(responseData);
+  if (result['message'] == 'Event uploaded successfully') {
+    return true;
+  } else {
+    throw Exception('Failed to upload event');
+  }
+} else {
+  throw Exception('Failed to upload event');
+}
 
-        if (result['success']) {
-          return true;
-        } else {
-          throw Exception('Failed to upload event');
-        }
-      } else {
-        throw Exception('Failed to upload event');
-      }
     } catch (error) {
       print('Error uploading event: $error');
       return false;

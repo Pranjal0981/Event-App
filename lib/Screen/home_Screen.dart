@@ -20,8 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _loadData() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
-      await userProvider.fetchEvents();
-   
+    await userProvider.fetchEvents();
   }
 
   @override
@@ -60,13 +59,15 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: userProvider.isLoading
           ? Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: userProvider.events.length,
-              itemBuilder: (context, index) {
-                final event = userProvider.events[index];
-                return EventCard(event: event);
-              },
-            ),
+          : userProvider.events.isEmpty
+              ? Center(child: Text('No events available', style: TextStyle(fontSize: 18, color: Colors.grey)))
+              : ListView.builder(
+                  itemCount: userProvider.events.length,
+                  itemBuilder: (context, index) {
+                    final event = userProvider.events[index];
+                    return EventCard(event: event);
+                  },
+                ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await userProvider.fetchEvents();
