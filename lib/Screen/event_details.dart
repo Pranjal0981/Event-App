@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:provider/provider.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:grocery_app/Providers/userProvider.dart';
 
 class EventDetailsScreen extends StatefulWidget {
@@ -12,15 +16,29 @@ class EventDetailsScreen extends StatefulWidget {
 }
 
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
+  late Razorpay _razorpay;
+  bool isProcessingPayment = false;
+
   @override
   void initState() {
     super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       if (userProvider.currentEvent == null || userProvider.currentEvent!['_id'] != widget.eventId) {
         userProvider.fetchEventById(widget.eventId);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
   }
 
   @override
@@ -51,13 +69,15 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                             _buildTitle(userProvider.currentEvent!),
                             SizedBox(height: 12),
                             _buildDescription(userProvider.currentEvent!),
+                            SizedBox(height: 12),
+                            _buildPrice(userProvider.currentEvent!),
                           ],
                         ),
                       ),
                     ),
                     _buildLocationAndDate(userProvider.currentEvent!),
                     SizedBox(height: 16),
-                    _buildBookTicketsButton(),
+                    _buildBookTicketsButton(userProvider.currentEvent!),
                   ],
                 ),
     );
@@ -108,6 +128,17 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
+  Widget _buildPrice(Map<String, dynamic> event) {
+    return Text(
+      'Price: ₹${event['price'].toString()}',
+      style: TextStyle(
+        color: Colors.red,
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
   Widget _buildLocationAndDate(Map<String, dynamic> event) {
     return Container(
       color: Colors.black,
@@ -135,16 +166,17 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  Widget _buildBookTicketsButton() {
+  Widget _buildBookTicketsButton(Map<String, dynamic> event) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          // Handle the booking action
-          _showBookingDialog();
-        },
+        onPressed: isProcessingPayment
+            ? null
+            : () {
+                _startPayment(event['price'], event['title']);
+              },
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red, // Button color
+          backgroundColor: Colors.red,
           padding: EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -162,36 +194,175 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  void _showBookingDialog() {
+ Future<void> _startPayment(int amount, String receipt) async {
+  setState(() {
+    isProcessingPayment = true;
+  });
+
+  try {
+    final order = await _createOrder(amount, receipt);
+    print('Order Details: $order'); // Debugging line
+    final orderId = order['id'];
+    if (orderId != null && orderId.isNotEmpty) {
+      _openRazorpayCheckout(orderId, amount);
+    } else {
+      _showErrorDialog('Order ID is missing.');
+    }
+  } catch (error) {
+    setState(() {
+      isProcessingPayment = false;
+    });
+    _showErrorDialog('Failed to create order. Please try again.');
+  }
+}
+
+Future<Map<String, dynamic>> _createOrder(int amount, String receipt) async {
+  final token = await _getToken();
+  if (token == null) {
+    throw Exception('No token found');
+  }
+
+  final url = 'http://192.168.243.187:3001/user/checkout'; // Replace with your API URL
+  final response = await http.post(
+    Uri.parse(url),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: json.encode({
+      'amount': amount, // Ensure amount is correctly formatted
+      'currency': 'INR',
+      'receipt': receipt,
+    }),
+  );
+
+  if (response.statusCode == 200) {
+    final responseData = json.decode(response.body);
+    print('Order Details: $responseData'); // Debugging line
+    return responseData['order']; // Ensure this returns the order object
+  } else {
+    throw Exception('Failed to create order');
+  }
+}
+
+ void _openRazorpayCheckout(String orderId, int amount) {
+  print('Opening Razorpay with orderId: $orderId and amount: $amount'); // Debugging line
+
+  var options = {
+    'key': 'rzp_test_yUjxBrOiwx3ugi', // Replace with your Razorpay Key ID
+    'amount': amount * 100, // Amount is in the smallest currency unit (paise)
+    'name': 'Event Booking',
+    'description': 'Ticket Booking',
+    'order_id': orderId, // Ensure this is correctly set
+    'prefill': {
+      'contact': '9302931857',
+      'email': 'pranjalshukla245@gmail.com',
+    },
+  };
+
+  try {
+    _razorpay.open(options);
+  } catch (e) {
+    setState(() {
+      isProcessingPayment = false;
+    });
+    _showErrorDialog('Error opening Razorpay checkout. Please try again.');
+  }
+}
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    _verifyPayment(response);
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    setState(() {
+      isProcessingPayment = false;
+    });
+    _showErrorDialog('Payment failed. Please try again.');
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    // Handle external wallet payments here
+  }
+
+  Future<void> _verifyPayment(PaymentSuccessResponse response) async {
+    final token = await _getToken();
+    if (token == null) {
+      _showErrorDialog('No token found. Please try again.');
+      return;
+    }
+
+    final url = 'http://192.168.243.187:3001/user/paymentverification'; // Replace with your API URL
+    final res = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({
+        'razorpay_order_id': response.orderId,
+        'razorpay_payment_id': response.paymentId,
+        'razorpay_signature': response.signature,
+      }),
+    );
+
+    if (res.statusCode == 200) {
+      setState(() {
+        isProcessingPayment = false;
+      });
+      _showSuccessDialog('Payment successful!');
+    } else {
+      setState(() {
+        isProcessingPayment = false;
+      });
+      _showErrorDialog('Payment verification failed. Please try again.');
+    }
+  }
+
+  Future<String?> _getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('token');
+  }
+
+  void _showSuccessDialog(String message) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Book Tickets'),
-          content: Text('Would you like to proceed with booking tickets for this event?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-                // Navigate to the booking page or show booking options
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-                // Handle the booking confirmation
-              },
-              child: Text('Confirm'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: Text('Success'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
   String _formatDate(String date) {
-    final DateTime parsedDate = DateTime.parse(date);
-    return '${parsedDate.day}/${parsedDate.month}/${parsedDate.year}';
+    if (date.isEmpty) return 'No Date';
+    final formattedDate = DateTime.parse(date).toLocal();
+    return '${formattedDate.day}/${formattedDate.month}/${formattedDate.year}';
   }
 }

@@ -3,8 +3,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class UserProvider extends ChangeNotifier {
+  late Razorpay _razorpay;
+  bool _isProcessing = false;
+  bool get isProcessing => _isProcessing;
+  String? _orderId;
   String? _token;
   Map<String, dynamic>? _currentUser;
   bool _isLoading = false;
@@ -26,6 +31,7 @@ class UserProvider extends ChangeNotifier {
     _isLoading = loading;
     notifyListeners();
   }
+  
 
   Future<void> signup(String name, String email, String phoneNumber, String password) async {
     try {
