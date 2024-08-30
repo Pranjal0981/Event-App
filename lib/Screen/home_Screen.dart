@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:grocery_app/Providers/userProvider.dart';
 import 'package:grocery_app/Screen/event_details.dart';
@@ -19,7 +20,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _loadData() async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-
     await userProvider.fetchEvents();
   }
 
@@ -29,7 +29,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Events'),
+        title: Text('Events', style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white)),
+        backgroundColor: Colors.black, // AppBar background color
         actions: [
           IconButton(
             icon: Icon(Icons.search),
@@ -52,6 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
               showModalBottomSheet(
                 context: context,
                 builder: (context) => FilterSheet(),
+                isScrollControlled: true
               );
             },
           ),
@@ -60,8 +62,9 @@ class _HomeScreenState extends State<HomeScreen> {
       body: userProvider.isLoading
           ? Center(child: CircularProgressIndicator())
           : userProvider.events.isEmpty
-              ? Center(child: Text('No events available', style: TextStyle(fontSize: 18, color: Colors.grey)))
+              ? Center(child: Text('No events available', style: Theme.of(context).textTheme.bodyMedium))
               : ListView.builder(
+                  padding: EdgeInsets.symmetric(vertical: 10),
                   itemCount: userProvider.events.length,
                   itemBuilder: (context, index) {
                     final event = userProvider.events[index];
@@ -73,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
           await userProvider.fetchEvents();
         },
         child: Icon(Icons.refresh),
+        backgroundColor: Colors.red, // FloatingActionButton color
       ),
     );
   }
@@ -100,7 +104,6 @@ class EventCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        // Navigate to the EventDetailsScreen
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -108,94 +111,129 @@ class EventCard extends StatelessWidget {
           ),
         );
       },
-      child: Card(
-        elevation: 6,
+      child: Container(
         margin: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+        decoration: BoxDecoration(
+          color: Colors.black, // Card color
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color.fromARGB(255, 45, 209, 198)!), // Card border color
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.5),
+              offset: Offset(0, 4),
+              blurRadius: 10,
+              spreadRadius: 10,
+            ),
+          ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildImageWithOverlay(),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildLocationAndPrice(),
+                  SizedBox(height: 10),
+                  _buildDate(),
+                  SizedBox(height: 10),
+                  _buildType(),
+                ],
+              ),
+            ),
+            _buildFavoriteButton(context, userProvider),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageWithOverlay() {
+    final image = event['image'] is Map<String, dynamic> ? event['image'] as Map<String, dynamic> : null;
+
+    return Stack(
+      children: [
+        image != null
+            ? ClipRRect(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+                child: Image.network(
+                  image['url'] ?? '',
+                  height: 220,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              )
+            : Container(
+                height: 220,
+                width: double.infinity,
+                color: Colors.grey[700],
+                child: Center(
+                  child: Icon(Icons.image, size: 100, color: Colors.grey[400]),
+                ),
+              ),
+        Positioned.fill(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+            child: Container(
+              color: Colors.black.withOpacity(0.4), // Blur overlay color
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 16,
+          left: 16,
+          right: 16,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildImage(),
-              SizedBox(height: 12),
-              _buildTitle(),
-              SizedBox(height: 8),
-              _buildDescription(),
-              SizedBox(height: 8),
-              _buildLocationAndPrice(),
-              SizedBox(height: 8),
-              _buildDate(),
-              SizedBox(height: 8),
-              _buildType(),
-              SizedBox(height: 8),
-              _buildFavoriteButton(context, userProvider),
+              Text(
+                event['title'] ?? 'No Title',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                  color: Colors.white, // Overlay text color
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                event['description'] ?? 'No Description',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.grey[300], // Overlay text color
+                ),
+              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildImage() {
-    final image = event['image'] is Map<String, dynamic> ? event['image'] as Map<String, dynamic> : null;
-
-    return image != null
-        ? ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.network(
-              image['url'] ?? '',
-              height: 200,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          )
-        : Container(
-            height: 200,
-            width: double.infinity,
-            color: Colors.grey[300],
-            child: Icon(Icons.image, size: 100, color: Colors.grey),
-          );
-  }
-
-  Widget _buildTitle() {
-    return Text(
-      event['title'] ?? 'No Title',
-      style: TextStyle(
-        fontWeight: FontWeight.bold,
-        fontSize: 20,
-        color: Colors.black87,
-      ),
-    );
-  }
-
-  Widget _buildDescription() {
-    return Text(
-      event['description'] ?? 'No Description',
-      maxLines: 3,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(color: Colors.grey[700]),
+      ],
     );
   }
 
   Widget _buildLocationAndPrice() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          'Location: ${event['location'] ?? 'No Location'}',
-          style: TextStyle(color: Colors.grey[600]),
-        ),
-        Text(
-          '\$${event['price'] ?? 0}',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.red,
+    return Container(
+      padding: EdgeInsets.all(8),
+    
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              'Location: ${event['location'] ?? 'No Location'}',
+              style: TextStyle(color: Colors.grey[400]),
+            ),
           ),
-        ),
-      ],
+          Text(
+            '\Rs ${event['price'] ?? 0}',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.red, // Price color
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -203,41 +241,54 @@ class EventCard extends StatelessWidget {
     final date = event['date'] as String?;
     final formattedDate = date != null ? _formatDate(date) : 'No Date';
 
-    return Text(
-      'Date: $formattedDate',
-      style: TextStyle(color: Colors.grey[600]),
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.all(8),
+    
+      child: Text(
+        'Date: $formattedDate',
+        style: TextStyle(color: Colors.grey[400]),
+      ),
     );
   }
 
   Widget _buildType() {
-    return Text(
-      'Type: ${event['eventType'] ?? 'No Type'}',
-      style: TextStyle(color: Colors.grey[600]),
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.all(8),
+    
+      child: Text(
+        'Type: ${event['eventType'] ?? 'No Type'}',
+        style: TextStyle(color: Colors.grey[400]),
+      ),
     );
   }
 
   Widget _buildFavoriteButton(BuildContext context, UserProvider userProvider) {
     final isFavorite = userProvider.favoriteEventIds.contains(event['_id']);
 
-    return Align(
-      alignment: Alignment.centerRight,
-      child: IconButton(
-        icon: Icon(
-          isFavorite ? Icons.favorite : Icons.favorite_border,
-          color: isFavorite ? Colors.red : Colors.grey,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: IconButton(
+          icon: Icon(
+            isFavorite ? Icons.favorite : Icons.favorite_border,
+            color: isFavorite ? Colors.red : Colors.grey,
+          ),
+          onPressed: () async {
+            try {
+              await userProvider.toggleFavorite(event['_id']);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(isFavorite ? 'Removed from favorites' : 'Added to favorites')),
+              );
+            } catch (error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to update favorite status')),
+              );
+            }
+          },
         ),
-        onPressed: () async {
-          try {
-            await userProvider.toggleFavorite(event['_id']);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(isFavorite ? 'Removed from favorites' : 'Added to favorites')),
-            );
-          } catch (error) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to update favorite status')),
-            );
-          }
-        },
       ),
     );
   }

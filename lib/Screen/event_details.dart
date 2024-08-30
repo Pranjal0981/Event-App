@@ -45,41 +45,52 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   Widget build(BuildContext context) {
     final userProvider = Provider.of<UserProvider>(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Event Details'),
-        backgroundColor: Colors.black,
-        elevation: 0,
-      ),
-      backgroundColor: Colors.black,
-      body: userProvider.isLoading
-          ? Center(child: CircularProgressIndicator())
-          : userProvider.currentEvent == null
-              ? Center(child: Text('Event not found', style: TextStyle(color: Colors.red, fontSize: 18)))
-              : Column(
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildImage(userProvider.currentEvent!),
-                            SizedBox(height: 16),
-                            _buildTitle(userProvider.currentEvent!),
-                            SizedBox(height: 12),
-                            _buildDescription(userProvider.currentEvent!),
-                            SizedBox(height: 12),
-                            _buildPrice(userProvider.currentEvent!),
-                          ],
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            title: Text('Event Details'),
+            backgroundColor: Colors.black,
+            elevation: 0,
+          ),
+          backgroundColor: Colors.black,
+          body: userProvider.isLoading
+              ? Center(child: CircularProgressIndicator())
+              : userProvider.currentEvent == null
+                  ? Center(child: Text('Event not found', style: TextStyle(color: Colors.red, fontSize: 18)))
+                  : Column(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildImage(userProvider.currentEvent!),
+                                SizedBox(height: 16),
+                                _buildTitle(userProvider.currentEvent!),
+                                SizedBox(height: 12),
+                                _buildDescription(userProvider.currentEvent!),
+                                SizedBox(height: 12),
+                                _buildPrice(userProvider.currentEvent!),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
+                        _buildLocationAndDate(userProvider.currentEvent!),
+                        SizedBox(height: 16),
+                        _buildBookTicketsButton(userProvider.currentEvent!),
+                      ],
                     ),
-                    _buildLocationAndDate(userProvider.currentEvent!),
-                    SizedBox(height: 16),
-                    _buildBookTicketsButton(userProvider.currentEvent!),
-                  ],
-                ),
+        ),
+        if (isProcessingPayment)
+          Container(
+            color: Colors.black54,
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+      ],
     );
   }
 
@@ -194,81 +205,77 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
- Future<void> _startPayment(int amount, String receipt) async {
-  setState(() {
-    isProcessingPayment = true;
-  });
+  Future<void> _startPayment(int amount, String receipt) async {
+    setState(() {
+      isProcessingPayment = true;
+    });
 
-  try {
-    final order = await _createOrder(amount, receipt);
-    print('Order Details: $order'); // Debugging line
-    final orderId = order['id'];
-    if (orderId != null && orderId.isNotEmpty) {
-      _openRazorpayCheckout(orderId, amount);
-    } else {
-      _showErrorDialog('Order ID is missing.');
+    try {
+      final order = await _createOrder(amount, receipt);
+      final orderId = order['id'];
+      if (orderId != null && orderId.isNotEmpty) {
+        _openRazorpayCheckout(orderId, amount);
+      } else {
+        _showErrorDialog('Order ID is missing.');
+      }
+    } catch (error) {
+      setState(() {
+        isProcessingPayment = false;
+      });
+      _showErrorDialog('Failed to create order. Please try again.');
     }
-  } catch (error) {
-    setState(() {
-      isProcessingPayment = false;
-    });
-    _showErrorDialog('Failed to create order. Please try again.');
-  }
-}
-
-Future<Map<String, dynamic>> _createOrder(int amount, String receipt) async {
-  final token = await _getToken();
-  if (token == null) {
-    throw Exception('No token found');
   }
 
-  final url = 'http://192.168.243.187:3001/user/checkout'; // Replace with your API URL
-  final response = await http.post(
-    Uri.parse(url),
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
-    },
-    body: json.encode({
-      'amount': amount, // Ensure amount is correctly formatted
-      'currency': 'INR',
-      'receipt': receipt,
-    }),
-  );
+  Future<Map<String, dynamic>> _createOrder(int amount, String receipt) async {
+    final token = await _getToken();
+    if (token == null) {
+      throw Exception('No token found');
+    }
 
-  if (response.statusCode == 200) {
-    final responseData = json.decode(response.body);
-    print('Order Details: $responseData'); // Debugging line
-    return responseData['order']; // Ensure this returns the order object
-  } else {
-    throw Exception('Failed to create order');
+    final url = 'http://192.168.120.187:3001/user/checkout'; // Replace with your API URL
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({
+        'amount': amount, // Ensure amount is correctly formatted
+        'currency': 'INR',
+        'receipt': receipt,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = json.decode(response.body);
+      return responseData['order']; // Ensure this returns the order object
+    } else {
+      throw Exception('Failed to create order');
+    }
   }
-}
 
- void _openRazorpayCheckout(String orderId, int amount) {
-  print('Opening Razorpay with orderId: $orderId and amount: $amount'); // Debugging line
+  void _openRazorpayCheckout(String orderId, int amount) {
+    var options = {
+      'key': 'rzp_test_yUjxBrOiwx3ugi', // Replace with your Razorpay Key ID
+      'amount': amount * 100, // Amount is in the smallest currency unit (paise)
+      'name': 'Event Master',
+      'description': 'Ticket Booking',
+      'order_id': orderId, // Ensure this is correctly set
+      'prefill': {
+        'contact': '9302931857',
+        'email': 'pranjalshukla245@gmail.com',
+      },
+    };
 
-  var options = {
-    'key': 'rzp_test_yUjxBrOiwx3ugi', // Replace with your Razorpay Key ID
-    'amount': amount * 100, // Amount is in the smallest currency unit (paise)
-    'name': 'Event Booking',
-    'description': 'Ticket Booking',
-    'order_id': orderId, // Ensure this is correctly set
-    'prefill': {
-      'contact': '9302931857',
-      'email': 'pranjalshukla245@gmail.com',
-    },
-  };
-
-  try {
-    _razorpay.open(options);
-  } catch (e) {
-    setState(() {
-      isProcessingPayment = false;
-    });
-    _showErrorDialog('Error opening Razorpay checkout. Please try again.');
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      setState(() {
+        isProcessingPayment = false;
+      });
+      _showErrorDialog('Error opening Razorpay checkout. Please try again.');
+    }
   }
-}
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
     _verifyPayment(response);
@@ -282,41 +289,45 @@ Future<Map<String, dynamic>> _createOrder(int amount, String receipt) async {
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {
-    // Handle external wallet payments here
+    setState(() {
+      isProcessingPayment = false;
+    });
+    _showErrorDialog('External wallet selected. Please try again.');
   }
 
   Future<void> _verifyPayment(PaymentSuccessResponse response) async {
     final token = await _getToken();
     if (token == null) {
-      _showErrorDialog('No token found. Please try again.');
+      setState(() {
+        isProcessingPayment = false;
+      });
+      _showErrorDialog('No token found');
       return;
     }
 
-    final url = 'http://192.168.243.187:3001/user/paymentverification'; // Replace with your API URL
-    final res = await http.post(
+    final url = 'http://192.168.120.187:3001/user/verify_payment'; // Replace with your API URL
+    final responseApi = await http.post(
       Uri.parse(url),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
       body: json.encode({
-        'razorpay_order_id': response.orderId,
         'razorpay_payment_id': response.paymentId,
+        'razorpay_order_id': response.orderId,
         'razorpay_signature': response.signature,
       }),
     );
 
-    if (res.statusCode == 200) {
-      setState(() {
-        isProcessingPayment = false;
-      });
-      _showSuccessDialog('Payment successful!');
+    if (responseApi.statusCode == 200) {
+      _showSuccessDialog('Payment successful. Thank you for your purchase!');
     } else {
-      setState(() {
-        isProcessingPayment = false;
-      });
-      _showErrorDialog('Payment verification failed. Please try again.');
+      _showErrorDialog('Payment verification failed. Please contact support.');
     }
+
+    setState(() {
+      isProcessingPayment = false;
+    });
   }
 
   Future<String?> _getToken() async {
@@ -360,9 +371,8 @@ Future<Map<String, dynamic>> _createOrder(int amount, String receipt) async {
     );
   }
 
-  String _formatDate(String date) {
-    if (date.isEmpty) return 'No Date';
-    final formattedDate = DateTime.parse(date).toLocal();
-    return '${formattedDate.day}/${formattedDate.month}/${formattedDate.year}';
+  String _formatDate(String dateString) {
+    final dateTime = DateTime.parse(dateString);
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 }

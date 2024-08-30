@@ -19,6 +19,9 @@ class UserProvider extends ChangeNotifier {
   Map<String, dynamic>? _currentEvent;
  List<dynamic> _myEvents = [];
   List<dynamic> get myEvents => _myEvents;
+  Map<String, bool> _filters = {};
+
+  Map<String, bool> get filters => _filters;
 
   bool get isAuthenticated => _token != null;
   bool get isLoading => _isLoading;
@@ -160,7 +163,7 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-    Future<void> fetchEvents() async {
+  Future<void> fetchEvents() async {
       try {
         setLoading(true);
 
@@ -426,4 +429,157 @@ Future<void> fetchEventById(String eventId) async {
       notifyListeners();
     }
   }
+
+ Future<void> logout(BuildContext context) async {
+    try {
+          final token = _token ?? await _getTokenFromPrefs();
+      final response = await http.post(
+        Uri.parse('http://192.168.243.187:3001/user/logout'), // Replace with your logout API URL
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Clear user data
+        _currentUser = null;
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('token');
+
+        // Notify listeners to update UI
+        notifyListeners();
+
+        // Navigate to login screen
+        Navigator.of(context).pushReplacementNamed('/login');
+      } else {
+        _showErrorDialog(context, 'Logout failed. Please try again.');
+      }
+    } catch (error) {
+      _showErrorDialog(context, 'An error occurred. Please try again.');
+    }
+  }
+  
+ 
+  Future<void> deleteEvent(String id) async {
+    final url = Uri.parse('http://192.168.243.187:3001/user/deleteEvents/$id');
+
+    // Retrieve the token from your preferred method
+    final token = _token ?? await _getTokenFromPrefs();
+
+    try {
+      final response = await http.delete(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token', // Add bearer token here
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Successfully deleted, update local state
+        _events.removeWhere((event) => event['_id'] == id);
+        notifyListeners();
+      } else {
+        // Handle unsuccessful response
+        final errorMessage = 'Failed to delete event: ${response.reasonPhrase}';
+        throw Exception(errorMessage);
+      }
+    } catch (error) {
+      // Log the error or show a user-friendly message
+      print('Error deleting event: $error');
+      rethrow; // Rethrow the error to be handled by the caller if needed
+    }
+  }
+
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+Future<void> applyFilters(
+  Map<String, bool> cityFilters,
+  Map<String, bool> priceFilters,
+  Map<String, bool> typeFilters
+) async {
+  _isLoading = true;
+  notifyListeners(); // Notify listeners that loading has started
+
+  try {
+    // Construct query parameters for each filter category
+    final cityQuery = cityFilters.entries
+        .where((entry) => entry.value) // Only include selected filters
+        .map((entry) => 'city[]=${Uri.encodeComponent(entry.key)}')
+        .join('&');
+
+    final priceQuery = priceFilters.entries
+        .where((entry) => entry.value)
+        .map((entry) => 'price[]=${Uri.encodeComponent(entry.key)}')
+        .join('&');
+
+    final typeQuery = typeFilters.entries
+        .where((entry) => entry.value)
+        .map((entry) => 'type[]=${Uri.encodeComponent(entry.key)}')
+        .join('&');
+
+    // Combine all query strings into a single query string
+    final queryString = [cityQuery, priceQuery, typeQuery]
+        .where((query) => query.isNotEmpty) // Remove empty query strings
+        .join('&');
+
+    // Construct the full URL for the request
+    final url = 'http://192.168.243.187:3001/user/applyFilters?$queryString';
+
+    // Perform the HTTP GET request
+    final response = await http.get(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      try {
+        // Decode JSON response
+        final Map<String, dynamic> jsonResponse = json.decode(response.body) as Map<String, dynamic>;
+        
+        // Extract the list of events from the response
+        final List<dynamic> events = jsonResponse['events'] as List<dynamic>? ?? [];
+
+        // Convert the events list to a list of maps
+        _events = events.map((e) => e as Map<String, dynamic>).toList();
+      } catch (e) {
+        // Handle JSON decoding error
+        _events = [];
+        print('Error decoding JSON response: $e');
+        // Optionally, notify the user about the issue
+      }
+    } else {
+      // Handle the case where the server returns an error status
+      _events = [];
+      print('Server error: ${response.statusCode}');
+      // Optionally, notify the user about the issue
+    }
+  } catch (error) {
+    // Handle network or other unexpected errors
+    _events = [];
+    print('Error applying filters: $error');
+    // Optionally, notify the user about the issue
+  }
+
+  _isLoading = false;
+  notifyListeners(); // Notify listeners that loading has finished
 }
+
+}
+
+

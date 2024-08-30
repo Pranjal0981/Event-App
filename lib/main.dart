@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:grocery_app/Screen/Splash_Screen.dart';
 import 'package:grocery_app/Screen/my_events.dart';
 import 'package:provider/provider.dart';
 import 'package:grocery_app/Providers/themeProvider.dart';
@@ -9,9 +10,7 @@ import 'package:grocery_app/Screen/theme_setting.dart';
 import 'package:grocery_app/Auth/login_screen.dart';
 import 'package:grocery_app/Auth/register_screen.dart';
 import 'package:grocery_app/Auth/forget_screen.dart';
-import 'package:grocery_app/Screen/home_screen.dart';
 import 'package:grocery_app/Screen/bottom_nav.dart';
-import 'package:grocery_app/Screen/splash_screen.dart';
 import 'package:grocery_app/Screen/about_us_screen.dart';
 import 'package:grocery_app/Screen/help_screen.dart';
 import 'package:grocery_app/Screen/payment_screen.dart';

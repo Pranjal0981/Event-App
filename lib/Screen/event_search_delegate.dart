@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/Providers/userProvider.dart';
+import 'package:grocery_app/Screen/home_Screen.dart';
 import 'package:provider/provider.dart';
-import 'package:grocery_app/Screen/home_screen.dart'; // Ensure this import is correct
 
 class EventSearchDelegate extends SearchDelegate {
   final Function(String) onSearch;

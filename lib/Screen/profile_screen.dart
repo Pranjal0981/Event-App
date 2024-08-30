@@ -167,8 +167,7 @@ class ProfileScreen extends StatelessWidget {
                       backgroundColor: Colors.red[800],
                     ),
                     onPressed: () {
-                      // userProvider.logout(); // Implement logout in UserProvider
-                      Navigator.of(context).pushReplacementNamed('/login');
+                      userProvider.logout(context);
                     },
                     child: Text(
                       'Logout',
