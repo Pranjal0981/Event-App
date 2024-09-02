@@ -1,9 +1,12 @@
+// lib/widgets/bottom_nav.dart
+
 import 'package:flutter/material.dart';
 import 'package:grocery_app/Screen/home_Screen.dart';
 import 'package:grocery_app/Screen/upload_event.dart';
 import 'package:grocery_app/Screen/favorites_screen.dart';
 import 'package:grocery_app/Screen/profile_screen.dart';
 import 'package:grocery_app/Screen/menu_screen.dart'; // Import the MenuScreen
+import 'package:grocery_app/Screen/booking_screen.dart'; // Import the BookingScreen
 
 class BottomNav extends StatefulWidget {
   @override
@@ -18,6 +21,7 @@ class _BottomNavState extends State<BottomNav> {
     UploadEventsScreen(),
     FavoriteEventsScreen(),
     ProfileScreen(),
+    BookingScreen(), // Add BookingScreen to the list
   ];
 
   void _onItemTapped(int index) {
@@ -93,6 +97,15 @@ class _BottomNavState extends State<BottomNav> {
                   : Icon(Icons.person_outline, key: ValueKey('profile_outline')),
             ),
             label: 'Profile',
+          ),
+          BottomNavigationBarItem(
+            icon: AnimatedSwitcher(
+              duration: Duration(milliseconds: 300),
+              child: _selectedIndex == 4
+                  ? Icon(Icons.bookmark, key: ValueKey('bookings'))
+                  : Icon(Icons.bookmark_border, key: ValueKey('bookings_border')),
+            ),
+            label: 'Bookings',
           ),
           BottomNavigationBarItem(
             icon: IconButton(

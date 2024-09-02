@@ -20,16 +20,16 @@ class UserProvider extends ChangeNotifier {
  List<dynamic> _myEvents = [];
   List<dynamic> get myEvents => _myEvents;
   Map<String, bool> _filters = {};
-
   Map<String, bool> get filters => _filters;
-
   bool get isAuthenticated => _token != null;
   bool get isLoading => _isLoading;
   Map<String, dynamic>? get currentUser => _currentUser;
   String? get token => _token;
   List<Map<String, dynamic>> get events => _events;
   Map<String, dynamic>? get currentEvent => _currentEvent;
+ List<dynamic> _bookings = [];
 
+  List<dynamic> get bookings => _bookings;
   void setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();
@@ -344,7 +344,7 @@ if (response.statusCode == 201) {  // Update to match your success status code
     }
   }
 
-Future<void> fetchEventById(String eventId) async {
+  Future<void> fetchEventById(String eventId) async {
   if (_currentEvent != null && _currentEvent!['_id'] == eventId) {
     // Event is already fetched
     return;
@@ -579,6 +579,41 @@ Future<void> applyFilters(
   _isLoading = false;
   notifyListeners(); // Notify listeners that loading has finished
 }
+
+
+  Future<void> fetchBookings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userString = prefs.getString('currentUser');
+    final user = json.decode(userString ?? '{}');
+    final userId = user['_id'];
+    final String apiUrl = 'http://192.168.243.187:3001/user/fetchBookings';
+
+    try {
+      final token = prefs.getString('token'); // Assuming you have stored the token in SharedPreferences
+      if (token == null) {
+        throw Exception('No token found');
+      }
+
+      final response = await http.get(
+        Uri.parse('$apiUrl?userId=$userId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        _bookings = json.decode(response.body)['bookings'];
+        print(bookings);
+        notifyListeners();
+      } else {
+        throw Exception('Failed to fetch bookings: ${response.reasonPhrase}');
+      }
+    } catch (e) {
+      print('Error fetching bookings: $e');
+      throw Exception('Error fetching bookings');
+    }
+  }
 
 }
 

@@ -18,6 +18,7 @@ class EventDetailsScreen extends StatefulWidget {
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
   late Razorpay _razorpay;
   bool isProcessingPayment = false;
+  int numberOfPeople = 1;
 
   @override
   void initState() {
@@ -29,7 +30,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
-      if (userProvider.currentEvent == null || userProvider.currentEvent!['_id'] != widget.eventId) {
+      if (userProvider.currentEvent == null ||
+          userProvider.currentEvent!['_id'] != widget.eventId) {
         userProvider.fetchEventById(widget.eventId);
       }
     });
@@ -57,7 +59,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           body: userProvider.isLoading
               ? Center(child: CircularProgressIndicator())
               : userProvider.currentEvent == null
-                  ? Center(child: Text('Event not found', style: TextStyle(color: Colors.red, fontSize: 18)))
+                  ? Center(
+                      child: Text('Event not found',
+                          style:
+                              TextStyle(color: Colors.red, fontSize: 18)))
                   : Column(
                       children: [
                         Expanded(
@@ -70,16 +75,20 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                 SizedBox(height: 16),
                                 _buildTitle(userProvider.currentEvent!),
                                 SizedBox(height: 12),
-                                _buildDescription(userProvider.currentEvent!),
+                                _buildDescription(
+                                    userProvider.currentEvent!),
                                 SizedBox(height: 12),
                                 _buildPrice(userProvider.currentEvent!),
+                                SizedBox(height: 16),
+                                _buildNumberOfPeopleSelector(),
                               ],
                             ),
                           ),
                         ),
                         _buildLocationAndDate(userProvider.currentEvent!),
                         SizedBox(height: 16),
-                        _buildBookTicketsButton(userProvider.currentEvent!),
+                        _buildBookTicketsButton(
+                            userProvider.currentEvent!),
                       ],
                     ),
         ),
@@ -177,6 +186,44 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
+  Widget _buildNumberOfPeopleSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Number of People:',
+          style: TextStyle(color: Colors.white, fontSize: 18),
+        ),
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.remove, color: Colors.white),
+              onPressed: () {
+                if (numberOfPeople > 1) {
+                  setState(() {
+                    numberOfPeople--;
+                  });
+                }
+              },
+            ),
+            Text(
+              numberOfPeople.toString(),
+              style: TextStyle(color: Colors.white, fontSize: 18),
+            ),
+            IconButton(
+              icon: Icon(Icons.add, color: Colors.white),
+              onPressed: () {
+                setState(() {
+                  numberOfPeople++;
+                });
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildBookTicketsButton(Map<String, dynamic> event) {
     return SizedBox(
       width: double.infinity,
@@ -184,7 +231,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         onPressed: isProcessingPayment
             ? null
             : () {
-                _startPayment(event['price'], event['title']);
+                int totalAmount = event['price'] * numberOfPeople;
+                _startPayment(totalAmount, event['title']);
               },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red,
@@ -232,7 +280,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       throw Exception('No token found');
     }
 
-    final url = 'http://192.168.120.187:3001/user/checkout'; // Replace with your API URL
+    final url = 'http://192.168.243.187:3001/user/checkout'; // Replace with your API URL
     final response = await http.post(
       Uri.parse(url),
       headers: {
@@ -257,77 +305,14 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   void _openRazorpayCheckout(String orderId, int amount) {
     var options = {
       'key': 'rzp_test_yUjxBrOiwx3ugi', // Replace with your Razorpay Key ID
-      'amount': amount * 100, // Amount is in the smallest currency unit (paise)
-      'name': 'Event Master',
-      'description': 'Ticket Booking',
-      'order_id': orderId, // Ensure this is correctly set
-      'prefill': {
-        'contact': '9302931857',
-        'email': 'pranjalshukla245@gmail.com',
-      },
+      'amount': amount * 100,
+      'currency': 'INR',
+      'name': 'Event Booking',
+      'order_id': orderId,
+      'description': 'Booking for event',
     };
 
-    try {
-      _razorpay.open(options);
-    } catch (e) {
-      setState(() {
-        isProcessingPayment = false;
-      });
-      _showErrorDialog('Error opening Razorpay checkout. Please try again.');
-    }
-  }
-
-  void _handlePaymentSuccess(PaymentSuccessResponse response) {
-    _verifyPayment(response);
-  }
-
-  void _handlePaymentError(PaymentFailureResponse response) {
-    setState(() {
-      isProcessingPayment = false;
-    });
-    _showErrorDialog('Payment failed. Please try again.');
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    setState(() {
-      isProcessingPayment = false;
-    });
-    _showErrorDialog('External wallet selected. Please try again.');
-  }
-
-  Future<void> _verifyPayment(PaymentSuccessResponse response) async {
-    final token = await _getToken();
-    if (token == null) {
-      setState(() {
-        isProcessingPayment = false;
-      });
-      _showErrorDialog('No token found');
-      return;
-    }
-
-    final url = 'http://192.168.120.187:3001/user/verify_payment'; // Replace with your API URL
-    final responseApi = await http.post(
-      Uri.parse(url),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: json.encode({
-        'razorpay_payment_id': response.paymentId,
-        'razorpay_order_id': response.orderId,
-        'razorpay_signature': response.signature,
-      }),
-    );
-
-    if (responseApi.statusCode == 200) {
-      _showSuccessDialog('Payment successful. Thank you for your purchase!');
-    } else {
-      _showErrorDialog('Payment verification failed. Please contact support.');
-    }
-
-    setState(() {
-      isProcessingPayment = false;
-    });
+    _razorpay.open(options);
   }
 
   Future<String?> _getToken() async {
@@ -335,16 +320,120 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     return prefs.getString('token');
   }
 
+  Future<String?> getUserID() async {
+ final prefs = await SharedPreferences.getInstance();
+    final userString = prefs.getString('currentUser');
+    final user = json.decode(userString ?? '{}');
+    final userId = user['_id'];
+    return userId;
+  }
+
+  String _formatDate(String date) {
+    // Implement your date formatting here
+    return date; // Placeholder
+  }
+
+void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+  setState(() {
+    isProcessingPayment = false;
+  });
+
+  final userProvider = Provider.of<UserProvider>(context, listen: false);
+  final event = userProvider.currentEvent;
+  final paymentId = response.paymentId;
+  final signature = response.signature;
+  final eventId = event?['_id'];
+  final orderId = response.orderId; // Ensure you capture the orderId from the response
+
+  if (paymentId != null && signature != null && eventId != null && orderId != null) {
+    try {
+      await _verifyPayment(paymentId, signature, eventId, numberOfPeople, orderId);
+      _showSuccessDialog('Payment Successful!');
+    } catch (error) {
+      _showErrorDialog('Payment verification failed. Please try again.');
+    }
+  } else {
+    _showErrorDialog('Payment or event ID is missing.');
+  }
+}
+
+  Future<void> _verifyPayment(String paymentId, String signature, String eventId, int numberOfPeople,String orderId) async {
+    final token = await _getToken();
+    if (token == null) {
+      throw Exception('No token found');
+    }
+
+    final userId = await getUserID();
+    final url = 'http://192.168.243.187:3001/user/verify-payment'; // Replace with your API URL
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({
+        'userId': userId,
+        'payment_id': paymentId,
+        'signature': signature,
+        'eventId': eventId,
+        'orderId':orderId,
+        'numberOfPeople': numberOfPeople,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Payment verification failed');
+    }
+
+    // Update booking status after successful payment verification
+    // await _updateBookingStatus(eventId, userId!);
+  }
+
+  Future<void> _updateBookingStatus(String eventId, String userId) async {
+    final token = await _getToken();
+    if (token == null) {
+      throw Exception('No token found');
+    }
+
+    final url = 'http://192.168.243.187:3001/user/update-booking-status'; // Replace with your API URL
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({
+        'userId': userId,
+        'eventId': eventId,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update booking status');
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    setState(() {
+      isProcessingPayment = false;
+    });
+    _showErrorDialog('Payment failed: ${response.message}');
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    _showSuccessDialog('External Wallet: ${response.walletName}');
+  }
+
   void _showSuccessDialog(String message) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: Text('Success'),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(ctx).pop();
             },
             child: Text('OK'),
           ),
@@ -356,23 +445,18 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: Text('Error'),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context).pop();
+              Navigator.of(ctx).pop();
             },
             child: Text('OK'),
           ),
         ],
       ),
     );
-  }
-
-  String _formatDate(String dateString) {
-    final dateTime = DateTime.parse(dateString);
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 }
