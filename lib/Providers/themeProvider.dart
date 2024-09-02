@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ThemeProvider with ChangeNotifier {
   ThemeData _themeData;
@@ -11,34 +12,48 @@ class ThemeProvider with ChangeNotifier {
 
   void toggleTheme() {
     _themeData = isDarkMode
-        ? ThemeData(
-            brightness: Brightness.light,
-            primaryColor: Colors.redAccent,
-            colorScheme: ColorScheme.light().copyWith(
-              primary: Colors.redAccent,
-              secondary: Colors.red,
-            ),
-            scaffoldBackgroundColor: Colors.white,
-            textTheme: const TextTheme(
-              bodyLarge: TextStyle(color: Colors.black),
-              bodyMedium: TextStyle(color: Colors.black),
-              bodySmall: TextStyle(color: Colors.black),
-            ),
-          )
-        : ThemeData(
-            brightness: Brightness.dark,
-            primaryColor: Colors.redAccent,
-            colorScheme: ColorScheme.dark().copyWith(
-              primary: Colors.redAccent,
-              secondary: Colors.red,
-            ),
-            scaffoldBackgroundColor: Colors.black,
-            textTheme: const TextTheme(
-              bodyLarge: TextStyle(color: Colors.white),
-              bodyMedium: TextStyle(color: Colors.white),
-              bodySmall: TextStyle(color: Colors.white),
-            ),
-          );
+        ? _buildLightTheme()
+        : _buildDarkTheme();
     notifyListeners();
+  }
+
+  ThemeData _buildLightTheme() {
+    return ThemeData(
+      brightness: Brightness.light,
+      primaryColor: Colors.redAccent,
+      colorScheme: ColorScheme.light().copyWith(
+        primary: Colors.redAccent,
+        secondary: Colors.red,
+      ),
+      scaffoldBackgroundColor: Colors.white,
+      textTheme: TextTheme(
+        bodyLarge: GoogleFonts.openSans(color: Colors.black),
+        bodyMedium: GoogleFonts.openSans(color: Colors.black),
+        displayLarge: GoogleFonts.openSans(color: Colors.black, fontWeight: FontWeight.bold),
+        displayMedium: GoogleFonts.openSans(color: Colors.black, fontWeight: FontWeight.bold),
+        // Add other text styles as needed
+      ),
+      // Add other theme properties if needed
+    );
+  }
+
+  ThemeData _buildDarkTheme() {
+    return ThemeData(
+      brightness: Brightness.dark,
+      primaryColor: Colors.redAccent,
+      colorScheme: ColorScheme.dark().copyWith(
+        primary: Colors.redAccent,
+        secondary: Colors.red,
+      ),
+      scaffoldBackgroundColor: Colors.black,
+      textTheme: TextTheme(
+        bodyLarge: GoogleFonts.openSans(color: Colors.white),
+        bodyMedium: GoogleFonts.openSans(color: Colors.white),
+        displayLarge: GoogleFonts.openSans(color: Colors.white, fontWeight: FontWeight.bold),
+        displayMedium: GoogleFonts.openSans(color: Colors.white, fontWeight: FontWeight.bold),
+        // Add other text styles as needed
+      ),
+      // Add other theme properties if needed
+    );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:grocery_app/Screen/Splash_Screen.dart';
+import 'package:grocery_app/Screen/edit_profile.dart';
 import 'package:grocery_app/Screen/my_events.dart';
 import 'package:provider/provider.dart';
 import 'package:grocery_app/Providers/themeProvider.dart';
@@ -65,7 +66,8 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => ProfileScreen(),
         '/helpCenter': (context) => HelpCenterScreen(),
         '/themeSettings': (context) => ThemeSettingsScreen(),
-        '/yourEvents':(context)=>MyEventsScreen()
+        '/yourEvents':(context)=>MyEventsScreen(),
+        '/editProfile':(context)=>EditProfileScreen()
       },
     );
   }

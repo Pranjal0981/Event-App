@@ -134,6 +134,66 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
+
+Future<void> updateProfile({
+  required String firstName,
+  required String lastName,
+  required String email,
+  required String phoneNumber,
+  required String address,
+  File? imageFile, // Optional image file parameter
+}) async {
+  _isLoading = true;
+  notifyListeners();
+
+  final token = _token ?? await _getTokenFromPrefs();
+  if (token == null) {
+    throw Exception('No token found');
+  }
+
+  final prefs = await SharedPreferences.getInstance();
+  final userString = prefs.getString('currentUser');
+  final user = json.decode(userString ?? '{}');
+  final userId = user['_id'];
+
+  final uri = Uri.parse('http://192.168.243.187:3001/user/updateProfile/$userId');
+  final request = http.MultipartRequest('PUT', uri);
+
+  // Add headers
+  request.headers['Authorization'] = 'Bearer $token';
+
+  // Add text fields
+  request.fields['firstName'] = firstName;
+  request.fields['lastName'] = lastName;
+  request.fields['email'] = email;
+  request.fields['phoneNumber'] = phoneNumber;
+  request.fields['address'] = address;
+
+  // Add image file if available
+  if (imageFile != null) {
+    request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+  }
+
+  try {
+    final response = await request.send();
+    final responseBody = await response.stream.bytesToString();
+
+    if (response.statusCode == 200) {
+      _currentUser = json.decode(responseBody);
+    } else {
+      final errorResponse = json.decode(responseBody);
+      print('Failed to update profile: ${errorResponse['message'] ?? response.reasonPhrase}');
+      throw Exception('Failed to update profile');
+    }
+  } catch (error) {
+    print('Error: $error');
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
+ 
+ 
   Future<void> _saveAuthDataToPrefs(String token, Map<String, dynamic> currentUser) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);

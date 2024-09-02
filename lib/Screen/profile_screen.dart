@@ -1,185 +1,324 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../Providers/userProvider.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
+  @override
+  _ProfileScreenState createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMixin {
+  late AnimationController _profileInfoController;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileInfoController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 300),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Fetch the current user when the screen is first built
+      Provider.of<UserProvider>(context, listen: false).fetchCurrentUser();
+      _profileInfoController.forward();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Fetch the current user every time dependencies change
+    Provider.of<UserProvider>(context).fetchCurrentUser();
+  }
+
+  @override
+  void dispose() {
+    _profileInfoController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context);
+    final user = userProvider.currentUser;
 
-    // Fetch the current user when the screen is loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      userProvider.fetchCurrentUser();
-    });
-
-    return Consumer<UserProvider>(
-      builder: (context, userProvider, child) {
-        final user = userProvider.currentUser;
-
-        // Show loading indicator if data is being fetched
-        if (userProvider.isLoading) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text('Profile'),
-              backgroundColor: Colors.black,
+    if (userProvider.isLoading) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Profile'),
+          backgroundColor: Colors.black,
+        ),
+        body: Center(
+          child: Shimmer.fromColors(
+            baseColor: Colors.grey[300]!,
+            highlightColor: Colors.grey[100]!,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 150,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(height: 16),
+                Container(
+                  width: 200,
+                  height: 20,
+                  color: Colors.grey[200],
+                ),
+              ],
             ),
-            body: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
-              ),
-            ),
-          );
-        }
-
-        // Show message if user is not logged in
-        if (user == null) {
-          return Scaffold(
-            appBar: AppBar(
-              title: Text('Profile'),
-              backgroundColor: Colors.black,
-            ),
-            body: Center(
-              child: Text(
-                'Please log in to view your profile.',
-                style: TextStyle(fontSize: 18, color: Colors.red[600]),
-              ),
-            ),
-          );
-        }
-
-        return Scaffold(
-          appBar: AppBar(
-            title: Text('Profile'),
-            backgroundColor: Colors.black,
-            actions: [
-              IconButton(
-                icon: Icon(Icons.edit, color: Colors.red),
-                onPressed: () {
-                  // Navigate to edit profile screen
-                  Navigator.of(context).pushNamed('/editProfile');
-                },
-              ),
-            ],
           ),
-          body: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // User profile picture
-                  Center(
-                    child: CircleAvatar(
-                      radius: 60,
-                      backgroundColor: Colors.red[800],
-                      child: CircleAvatar(
-                        radius: 55,
-                        backgroundImage: NetworkImage(
-                          user['avatarUrl'] ?? 'https://via.placeholder.com/150',
+        ),
+      );
+    }
+
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Profile'),
+          backgroundColor: Colors.black,
+        ),
+        body: Center(
+          child: Text(
+            'Please log in to view your profile.',
+            style: TextStyle(fontSize: 18, color: Colors.red[600]),
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Profile'),
+        backgroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: FaIcon(FontAwesomeIcons.edit, color: Colors.red),
+            onPressed: () {
+              Navigator.of(context).pushNamed('/editProfile');
+            },
+          ),
+        ],
+      ),
+      body: AnimatedBuilder(
+        animation: _profileInfoController,
+        builder: (context, child) {
+          return FadeTransition(
+            opacity: _profileInfoController,
+            child: ScaleTransition(
+              scale: _profileInfoController,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return Dialog(
+                                  child: InteractiveViewer(
+                                    child: Image.network(
+                                      user['image']?['url'] ?? '',
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          child: Hero(
+                            tag: 'profileImage',
+                            child: Container(
+                              width: 150,
+                              height: 150,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.red[800],
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    offset: Offset(0, 4),
+                                    blurRadius: 10,
+                                    spreadRadius: 1,
+                                  ),
+                                  BoxShadow(
+                                    color: Colors.white38,
+                                    offset: Offset(0, -4),
+                                    blurRadius: 10,
+                                    spreadRadius: 1,
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: user['image']?['url'] != null
+                                    ? CircleAvatar(
+                                        radius: 75,
+                                        backgroundImage: NetworkImage(user['image']['url']),
+                                        onBackgroundImageError: (error, stackTrace) {
+                                          print('Error loading image: $error');
+                                        },
+                                      )
+                                    : Icon(
+                                        Icons.person,
+                                        color: Colors.white,
+                                        size: 90,
+                                      ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  // User name
-                  Center(
-                    child: Text(
-                      user['name'] ?? 'N/A',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.red[800],
+                      SizedBox(height: 16),
+                      Text(
+                        '${user['firstName'] ?? 'N/A'} ${user['lastName'] ?? 'N/A'}',
+                        style: GoogleFonts.dancingScript(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Center(
-                    child: Text(
-                      user['email'] ?? 'N/A',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey[400],
+                      SizedBox(height: 4),
+                      Text(
+                        user['email'] ?? 'N/A',
+                        style: GoogleFonts.dancingScript(
+                          fontSize: 18,
+                          color: Colors.grey[400],
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                  ),
-                  SizedBox(height: 24),
-                  // Information section
-                  Card(
-                    elevation: 4,
-                    color: Colors.grey[900],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ListTile(
-                            leading: Icon(Icons.phone, color: Colors.red),
-                            title: Text(
-                              'Phone Number',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red[800],
-                              ),
+                      SizedBox(height: 24),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[900],
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              offset: Offset(0, 4),
+                              blurRadius: 10,
+                              spreadRadius: 1,
                             ),
-                            subtitle: Text(
-                              user['phoneNumber'] ?? 'N/A',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
+                            BoxShadow(
+                              color: Colors.white38,
+                              offset: Offset(0, -4),
+                              blurRadius: 10,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ListTile(
+                                leading: FaIcon(FontAwesomeIcons.phone, color: Colors.red),
+                                title: Text(
+                                  'Phone Number',
+                                  style: GoogleFonts.dancingScript(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red[800],
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  user['phoneNumber'] ?? 'N/A',
+                                  style: GoogleFonts.dancingScript(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
+                              Divider(color: Colors.grey[700]),
+                              ListTile(
+                                leading: FaIcon(FontAwesomeIcons.locationArrow, color: Colors.red),
+                                title: Text(
+                                  'Address',
+                                  style: GoogleFonts.dancingScript(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red[800],
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  user['address'] ?? 'N/A',
+                                  style: GoogleFonts.dancingScript(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 24),
+                      Container(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.red[800]!, Colors.red[600]!],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              offset: Offset(0, 4),
+                              blurRadius: 10,
+                              spreadRadius: 1,
+                            ),
+                            BoxShadow(
+                              color: Colors.white38,
+                              offset: Offset(0, -4),
+                              blurRadius: 10,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          Divider(color: Colors.grey[700]),
-                          ListTile(
-                            leading: Icon(Icons.location_on, color: Colors.red),
-                            title: Text(
-                              'Address',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red[800],
-                              ),
-                            ),
-                            subtitle: Text(
-                              user['address'] ?? 'N/A',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.white,
-                              ),
+                          onPressed: () {
+                            Provider.of<UserProvider>(context, listen: false).logout(context);
+                          },
+                          child: Text(
+                            'Logout',
+                            style: GoogleFonts.dancingScript(
+                              fontSize: 18,
+                              color: Colors.white,
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                  SizedBox(height: 24),
-                  // Logout button
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      backgroundColor: Colors.red[800],
-                    ),
-                    onPressed: () {
-                      userProvider.logout(context);
-                    },
-                    child: Text(
-                      'Logout',
-                      style: TextStyle(fontSize: 18, color: Colors.white),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

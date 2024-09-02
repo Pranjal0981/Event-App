@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:grocery_app/Auth/login_screen.dart';
+import 'package:grocery_app/Screen/animated_svg_text.dart';
 import 'package:grocery_app/Screen/home_Screen.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // For managing authentication state
 
@@ -8,16 +10,33 @@ class SplashScreen extends StatefulWidget {
   _SplashScreenState createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<int> _animation;
+  Timer? _redirectTimer;
+
   @override
   void initState() {
     super.initState();
-    _navigateToNextScreen();
+    
+    _animationController = AnimationController(
+      duration: Duration(seconds: 5), // Adjust the duration to 5 seconds
+      vsync: this,
+    );
+
+    _animation = IntTween(begin: 0, end: 12).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+
+    _animationController.forward();
+
+    _redirectTimer = Timer(Duration(seconds: 5), () {
+      _navigateToNextScreen();
+    });
   }
 
   Future<void> _navigateToNextScreen() async {
-    await Future.delayed(Duration(seconds: 3)); // Adjust the duration as needed
-
     // Check if user is logged in
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final bool isLoggedIn = prefs.getBool('isLoggedIn') ?? false;
@@ -57,13 +76,23 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: Colors.white,
               ),
               SizedBox(height: 20),
-              Text(
-                'EventMaster',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              // Animated text
+              AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return CustomPaint(
+                    size: Size(200, 60), // Adjust the size as needed
+                    painter: AnimatedTextPainter(
+                      text: 'Event Master',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      currentLetterIndex: _animation.value,
+                    ),
+                  );
+                },
               ),
               SizedBox(height: 10),
               Text(
@@ -87,5 +116,12 @@ class _SplashScreenState extends State<SplashScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _redirectTimer?.cancel();
+    super.dispose();
   }
 }

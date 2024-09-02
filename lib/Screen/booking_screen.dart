@@ -66,32 +66,20 @@ class BookingCard extends StatefulWidget {
 
 class _BookingCardState extends State<BookingCard> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
   late Animation<Color?> _borderColorAnimation;
-  late Animation<double> _borderWidthAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 500),
-    )..forward();
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 0.7).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
-    );
+      duration: Duration(seconds: 2),
+    )..repeat(reverse: true); // Infinite loop with reverse
     _borderColorAnimation = ColorTween(
       begin: Colors.red,
-      end: const Color.fromARGB(255, 126, 127, 95),
+      end: Colors.black,
     ).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    _borderWidthAnimation = Tween<double>(begin: 2.0, end: 4.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _controller, curve: Curves.linear),
     );
   }
 
@@ -105,59 +93,54 @@ class _BookingCardState extends State<BookingCard> with SingleTickerProviderStat
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        return ScaleTransition(
-          scale: _scaleAnimation,
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: _borderColorAnimation.value!,
-                  width: _borderWidthAnimation.value,
-                ),
-                borderRadius: BorderRadius.circular(12.0),
-              ),
-              child: Card(
-                elevation: 5,
-                margin: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                color: Colors.black, // Black card background
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        event != null ? event['title'] ?? 'No Event Title' : 'No Event Information',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18.0,
-                          color: Colors.red, // Red title text
-                        ),
-                      ),
-                      SizedBox(height: 8.0),
-                      _buildAnimatedText('Description: ${event != null ? event['description'] ?? 'No Description' : 'N/A'}'),
-                      SizedBox(height: 8.0),
-                      _buildAnimatedText('Date: ${event != null ? event['date'] != null ? DateTime.parse(event['date']).toLocal().toString() : 'No Date' : 'N/A'}'),
-                      SizedBox(height: 8.0),
-                      _buildAnimatedText('Booked by: ${user != null ? "${user['firstName'] ?? 'No First Name'} ${user['lastName'] ?? 'No Last Name'}" : 'No User Name'}'),
-                      SizedBox(height: 8.0),
-                      _buildAnimatedText('Email: ${user != null ? user['email'] ?? 'No Email' : 'N/A'}'),
-                      SizedBox(height: 8.0),
-                      _buildAnimatedText('Number of People: ${booking['numberOfPeople'] ?? 'N/A'}'),
-                      SizedBox(height: 8.0),
-                      _buildAnimatedText('Verified: ${booking['isVerified'] ? 'Yes' : 'No'}',
-                        textStyle: TextStyle(
-                          color: booking['isVerified'] ? Colors.red : Colors.white, // Red if verified, white if not
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 16.0),
-                      qrCode != null
-                          ? _buildQrCodeButton(context, qrCode)
-                          : SizedBox.shrink(), // Display nothing if qrCode is null
-                    ],
+        return Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: _borderColorAnimation.value!,
+              width: 4.0,
+            ),
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          child: Card(
+            elevation: 5,
+            margin: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            color: Colors.black, // Black card background
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event != null ? event['title'] ?? 'No Event Title' : 'No Event Information',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20.0, // Larger font size for the title
+                      color: Colors.red, // Red title text
+                      fontFamily: 'Arial', // Specify font if needed
+                    ),
                   ),
-                ),
+                  SizedBox(height: 8.0),
+                  _buildAnimatedText('Description: ${event != null ? event['description'] ?? 'No Description' : 'N/A'}'),
+                  SizedBox(height: 8.0),
+                  _buildAnimatedText('Date: ${event != null ? event['date'] != null ? DateTime.parse(event['date']).toLocal().toString() : 'No Date' : 'N/A'}'),
+                  SizedBox(height: 8.0),
+                  _buildAnimatedText('Booked by: ${user != null ? "${user['firstName'] ?? 'No First Name'} ${user['lastName'] ?? 'No Last Name'}" : 'No User Name'}'),
+                  SizedBox(height: 8.0),
+                  _buildAnimatedText('Email: ${user != null ? user['email'] ?? 'No Email' : 'N/A'}'),
+                  SizedBox(height: 8.0),
+                  _buildAnimatedText('Number of People: ${booking['numberOfPeople'] ?? 'N/A'}'),
+                  SizedBox(height: 8.0),
+                  _buildAnimatedText('Verified: ${booking['isVerified'] ? 'Yes' : 'No'}',
+                    textStyle: TextStyle(
+                      color: booking['isVerified'] ? Colors.red : Colors.white, // Red if verified, white if not
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 16.0),
+                  qrCode != null
+                      ? _buildQrCodeButton(context, qrCode)
+                      : SizedBox.shrink(), // Display nothing if qrCode is null
+                ],
               ),
             ),
           ),
@@ -177,46 +160,52 @@ class _BookingCardState extends State<BookingCard> with SingleTickerProviderStat
     );
   }
 
- Widget _buildQrCodeButton(BuildContext context, String qrCode) {
-  return ElevatedButton(
-    onPressed: () => _showQrCodeModal(context, qrCode),
-    child: Text('Verify with QR'),
-    style: ElevatedButton.styleFrom(
-      backgroundColor: Colors.red, // Button background color
-      foregroundColor: Colors.white, // Button text color
-    ),
-  );
-}
-
-
-void _showQrCodeModal(BuildContext context, String qrCode) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true, // Allows modal to be resized
-    builder: (BuildContext context) {
-      return Container(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'QR Code',
-              style: TextStyle(
-                fontSize: 20.0,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            SizedBox(height: 16.0),
-            Center(
-              child: _buildQrCodeImage(qrCode),
-            ),
-            SizedBox(height: 16.0),
-          ],
+  Widget _buildQrCodeButton(BuildContext context, String qrCode) {
+    return ElevatedButton(
+      onPressed: () => _showQrCodeModal(context, qrCode),
+      child: Text('Verify with QR'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.red, // Button background color
+        foregroundColor: Colors.white, // Button text color
+        padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 20.0),
+        textStyle: TextStyle(
+          fontSize: 16.0, // Button text size
+          fontWeight: FontWeight.bold, // Button text weight
         ),
-      );
-    },
-  );
-}
+      ),
+    );
+  }
+
+  void _showQrCodeModal(BuildContext context, String qrCode) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Allows modal to be resized
+      builder: (BuildContext context) {
+        return Container(
+          padding: EdgeInsets.all(16.0),
+          color: Colors.black, // Modal background color
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'QR Code',
+                style: TextStyle(
+                  fontSize: 20.0,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red, // Modal title color
+                ),
+              ),
+              SizedBox(height: 16.0),
+              Center(
+                child: _buildQrCodeImage(qrCode),
+              ),
+              SizedBox(height: 16.0),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   Widget _buildQrCodeImage(String qrCode) {
     try {
@@ -230,7 +219,7 @@ void _showQrCodeModal(BuildContext context, String qrCode) {
       );
     } catch (e) {
       print('Error decoding QR code: $e');
-      return Center(child: Text('Error displaying QR code'));
+      return Center(child: Text('Error displaying QR code', style: TextStyle(color: Colors.white)));
     }
   }
 

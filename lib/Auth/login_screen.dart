@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:grocery_app/Providers/userProvider.dart';
 import 'package:provider/provider.dart';
+import 'package:grocery_app/Providers/userProvider.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -20,10 +20,10 @@ class _LoginScreenState extends State<LoginScreen> {
         builder: (context, userProvider, child) {
           return Scaffold(
             body: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              padding: const EdgeInsets.all(16.0),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.black, Colors.grey[850]!],
+                  colors: [Colors.black87, Colors.grey[850]!],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                 ),
@@ -32,24 +32,24 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       // App logo or name
                       Padding(
-                        padding: const EdgeInsets.only(top: 40.0, bottom: 20.0),
+                        padding: const EdgeInsets.only(top: 40.0, bottom: 30.0),
                         child: Icon(
                           Icons.person_pin,
-                          size: 120,
+                          size: 100,
                           color: Colors.redAccent,
                         ),
                       ),
-                      // Login card
+                      // Login card with modern design
                       Card(
                         color: Colors.grey[900],
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
+                          borderRadius: BorderRadius.circular(16),
                         ),
-                        elevation: 10,
+                        elevation: 8,
                         shadowColor: Colors.black54,
                         child: Padding(
                           padding: const EdgeInsets.all(20.0),
@@ -61,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(color: Colors.white),
                                 decoration: InputDecoration(
                                   filled: true,
-                                  fillColor: Colors.grey[850],
+                                  fillColor: Colors.grey[800],
                                   labelText: 'Email',
                                   labelStyle: TextStyle(color: Colors.redAccent),
                                   prefixIcon: Icon(Icons.email_outlined, color: Colors.redAccent),
@@ -72,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 keyboardType: TextInputType.emailAddress,
                               ),
-                              SizedBox(height: 20),
+                              SizedBox(height: 16),
                               // Password input field with eye icon
                               TextField(
                                 controller: _passwordController,
@@ -80,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 obscureText: _obscurePassword,
                                 decoration: InputDecoration(
                                   filled: true,
-                                  fillColor: Colors.grey[850],
+                                  fillColor: Colors.grey[800],
                                   labelText: 'Password',
                                   labelStyle: TextStyle(color: Colors.redAccent),
                                   prefixIcon: Icon(Icons.lock_outline, color: Colors.redAccent),
@@ -101,42 +101,48 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
-                              SizedBox(height: 20),
-                              // Login button
+                              SizedBox(height: 24),
+                              // Login button with gradient background
                               userProvider.isLoading
                                   ? Center(child: CircularProgressIndicator())
-                                  : ElevatedButton(
-                                      onPressed: () async {
-                                        try {
-                                          await userProvider.login(
-                                            _emailController.text,
-                                            _passwordController.text,
-                                          );
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('Login Successful'),
-                                              backgroundColor: Colors.green,
-                                            ),
-                                          );
-                                          Navigator.pushReplacementNamed(context, '/home');
-                                        } catch (error) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text('Login Failed'),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      child: Text(
-                                        'Login',
-                                        style: TextStyle(fontSize: 18),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        padding: EdgeInsets.symmetric(vertical: 14.0),
-                                        foregroundColor: Colors.redAccent,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(12.0),
+                                  : Container(
+                                      width: double.infinity,
+                                      child: ElevatedButton(
+                                        onPressed: () async {
+                                          try {
+                                            await userProvider.login(
+                                              _emailController.text,
+                                              _passwordController.text,
+                                            );
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text('Login Successful'),
+                                                backgroundColor: Colors.green,
+                                              ),
+                                            );
+                                            Navigator.pushReplacementNamed(context, '/home');
+                                          } catch (error) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text('Login Failed'),
+                                                backgroundColor: Colors.red,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                        child: Text(
+                                          'Login',
+                                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                        ),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.redAccent, // Background color
+                                          foregroundColor: Colors.white, // Text color
+                                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12.0),
+                                          ),
+                                          shadowColor: Colors.black54,
+                                          elevation: 8,
                                         ),
                                       ),
                                     ),
